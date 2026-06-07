@@ -1,0 +1,283 @@
+/* ───────────────────────────────────────────────────────────
+   Yamanote Line — station melody player
+   Visual system lifted from the Figma source:
+     bg        rgb(25,25,23)      warm near-black
+     JR green  rgb(40,163,81)
+     control   linear-gradient(180deg, #474745, #353533)
+     type      Space Grotesk (Medium / Bold)
+   ─────────────────────────────────────────────────────────── */
+
+:root {
+  --bg:        rgb(25, 25, 23);
+  --green:     rgb(40, 163, 81);
+  --ctrl-top:  rgb(71, 71, 69);
+  --ctrl-bot:  rgb(53, 53, 51);
+  --dim:       rgba(255, 255, 255, 0.30);
+
+  --badge:     96px;    /* JY number box — ALWAYS 96×96, never scales   */
+  --dot:       10px;    /* dotted-line period (set by JS)               */
+
+  /* shared "halo" that lets chrome occlude the dotted spine,
+     matching the figma 0 0 10px 10px bg shadow */
+  --halo: 0 0 10px 11px var(--bg);
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur:  0.62s;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+}
+
+/* full-bleed app surface, centred on a phone-width column */
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 460px;
+}
+
+/* ── dotted spine ─────────────────────────────────────────────
+   Lives INSIDE the ribbon so it scrolls together with the names.
+   --dot divides the slot height evenly, so the silent re-centre
+   (a jump of N×slot) preserves the dot phase — no visible flicker. */
+.spine {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  margin-left: -2px;
+  transform: translateY(0);
+  transition: transform var(--dur) var(--ease);
+  background-image: radial-gradient(circle at center,
+                    rgba(255, 255, 255, 0.30) 1.5px, transparent 2px);
+  background-size: 4px var(--dot, 10px);
+  background-repeat: repeat-y;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ── ribbon: static container; stations are positioned individually ─ */
+.ribbon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+}
+.no-anim,
+.no-anim * { transition: none !important; }
+
+/* each station eases to the Y for its role (prev / current / next);
+   far stations fade to 0 so only those three are ever visible */
+.station {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  pointer-events: none;
+  transition: transform var(--dur) var(--ease),
+              opacity var(--dur) var(--ease);
+  will-change: transform, opacity;
+}
+.station.far .name { pointer-events: none; }
+
+/* a bg-coloured block that erases the dotted line around this
+   station's content, leaving a clean vertical gap. It grows when
+   the station becomes active to clear the name AND the JY badge. */
+.station .eraser {
+  position: absolute;
+  left: 50%;
+  width: 200px;
+  transform: translateX(-50%);
+  background: var(--bg);
+  top: -24px;            /* 12px name half + 12px gap          */
+  height: 48px;
+  transition: top var(--dur) var(--ease),
+              height var(--dur) var(--ease);
+  pointer-events: none;
+}
+.station.active .eraser {
+  top: calc(-50px - var(--badge));   /* clear box top + 16px gap */
+  height: calc(84px + var(--badge)); /* down to name + 16px gap  */
+}
+
+/* the name sits exactly on the slot centre line */
+.station .name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  text-align: center;
+  font-weight: 500;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--dim);
+  transform: translateY(-50%) scale(0.667);   /* 36 → 24px when dim */
+  transform-origin: center center;
+  transition: color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.station.active .name {
+  color: #fff;
+  transform: translateY(-50%) scale(1);
+  cursor: default;
+}
+
+/* the JY badge floats above the name, fading + scaling into view
+   only while its station is the active one */
+.station .badge {
+  position: absolute;
+  bottom: calc(50% + 34px);       /* 18px name half + 16px gap */
+  left: 50%;
+  width: var(--badge);
+  height: var(--badge);
+  margin-left: calc(var(--badge) / -2);
+  border-radius: 8px;
+  background: var(--green);
+  opacity: 0;
+  transform: scale(0.55);
+  transform-origin: center bottom;
+  transition: opacity calc(var(--dur) * 0.85) var(--ease),
+              transform var(--dur) var(--ease);
+}
+.station.active .badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.badge .inner {
+  position: absolute;
+  inset: 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.badge .jy {
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.badge .num {
+  font-size: 46px;
+  font-weight: 500;
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+}
+
+/* ── top loop toggle ──────────────────────────────────────── */
+.toggle {
+  position: absolute;
+  top: max(48px, env(safe-area-inset-top, 0px) + 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  border-radius: 115px;
+  background: linear-gradient(180deg, var(--ctrl-top), var(--ctrl-bot));
+  box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  z-index: 5;
+}
+.toggle button {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--dim);
+  padding: 13px 24px;
+  cursor: pointer;
+  transition: color 0.35s var(--ease);
+}
+.toggle button.on { color: #fff; }
+.toggle .divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── bottom media controls ────────────────────────────────── */
+.controls {
+  position: absolute;
+  bottom: max(54px, env(safe-area-inset-bottom, 0px) + 30px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 38px;
+  z-index: 5;
+}
+
+.ctrl {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #fff;
+}
+.ctrl svg { display: block; }
+
+.ctrl.skip {
+  width: 53px;
+  height: 53px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--ctrl-top), var(--ctrl-bot));
+  box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.18s var(--ease), filter 0.2s var(--ease);
+}
+.ctrl.play {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.18s var(--ease);
+}
+.ctrl:active   { transform: scale(0.93); }
+.ctrl.skip:active { filter: brightness(1.25); }
+
+/* play / pause icon swap */
+.play .icon-pause { display: none; }
+.play.playing .icon-play  { display: none; }
+.play.playing .icon-pause { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spine, .station, .station .name, .station .badge { transition-duration: 0.001s; }
+}

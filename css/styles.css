@@ -43,17 +43,18 @@ body {
 }
 
 /* full-bleed app surface, centred on a phone-width column.
-   Height is pinned to the DYNAMIC viewport (100dvh) rather than `inset:0`,
-   because in an iOS standalone PWA the fixed-positioning viewport can be
-   reported shorter than the screen — leaving a black gap at the bottom.
-   A JS-set --app-height (window.innerHeight) wins where it's available. */
+   In an iOS standalone PWA with a black-translucent status bar, content draws
+   UNDER the status bar — and WebKit then under-reports every height reference
+   (100vh, 100dvh, window.innerHeight) by the top safe-area inset, leaving a
+   black gap at the BOTTOM. We add that inset back so the surface reaches the
+   physical screen edge. In a normal browser the inset is 0, so this is a no-op. */
 .app {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100vh;                       /* fallback for old engines */
-  height: var(--app-height, 100dvh);   /* dynamic vh, JS override wins */
+  height: calc(100vh + env(safe-area-inset-top, 0px));   /* fallback */
+  height: calc(100dvh + env(safe-area-inset-top, 0px));  /* dynamic vh */
   overflow: hidden;
   background: var(--bg);
 }

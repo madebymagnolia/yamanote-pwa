@@ -213,23 +213,13 @@
     rt = window.setTimeout(() => { measure(); layout(false); }, 120);
   });
 
-  // Pin the app surface to the REAL viewport height. In an iOS standalone PWA
-  // the fixed-positioning viewport can be shorter than the screen, so we drive
-  // height from window.innerHeight (which reports the full standalone height).
-  function setAppHeight() {
-    document.documentElement.style.setProperty("--app-height", window.innerHeight + "px");
-  }
-  setAppHeight();
-  window.addEventListener("resize", setAppHeight);
+  // Re-measure once iOS settles the new viewport after an orientation change.
   window.addEventListener("orientationchange", () => {
-    setAppHeight();
-    // iOS settles the new viewport a beat after the event fires
-    window.setTimeout(() => { setAppHeight(); measure(); layout(false); }, 250);
+    window.setTimeout(() => { measure(); layout(false); }, 250);
   });
 
   /* boot ------------------------------------------------------------------- */
   build();
-  setAppHeight();
   measure();
   layout(false);
   setLoop(true);

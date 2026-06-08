@@ -166,40 +166,127 @@
     }, DUR_MS + 60);
   }
 
-  function next() { step(direction); }
-  function prev() { step(-direction); }
-
   function jumpTo(i) {
     step(offsetOf(i));
+    syncAudio(true);
   }
+
+  /* ───────────────────────────────────────────────────────────────────────
+     audio transport — the inner-loop playlist behaves like a repeating
+     Spotify playlist. The "playlist" is the set of stations that have an
+     audio file, walked in the current loop direction (inner ascends, outer
+     descends). With every station scored it degrades to a plain ±1 step.
+       · next ............ skip to the next station that has audio, play it
+       · prev (>3s in) ... restart the current track
+       · prev (≤3s in) ... skip to the previous station that has audio
+       · track ends ...... auto-advance to the next track (loops forever)
+     currentIndex is the single source of truth; audio always reflects it.
+     ─────────────────────────────────────────────────────────────────────── */
+  const audio = new Audio();
+  audio.preload = "auto";
+  const PREV_RESTART_S = 3;
+
+  const normIdx = (i) => ((i % N) + N) % N;
+  // Each station can carry a track per loop: audio: { inner, outer }. The
+  // active playlist follows the current loop direction, so the same station
+  // plays a different recording on the inner vs. outer loop.
+  const loopKey = () => (direction === +1 ? "inner" : "outer");
+  const srcFor  = (i) => {
+    const a = S[normIdx(i)].audio;
+    return (a && a[loopKey()]) || null;
+  };
+  const cacheKey = (i) => loopKey() + ":" + normIdx(i);
+
+  // Scan from the current station in `dir` for the nearest station that has a
+  // track on the ACTIVE loop.
+  function scanAudio(dir) {
+    for (let s = 1; s <= N; s++) {
+      const i = normIdx(currentIndex + dir * s);
+      if (srcFor(i)) return { dist: s };
+    }
+    return null;
+  }
+
+  // Point the <audio> at the current station. `restart` rewinds to 0. If the
+  // user intends playback (`playing`) and the station has a track, it plays;
+  // a silent station just goes quiet while the play intent is preserved.
+  function syncAudio(restart) {
+    const src = srcFor(currentIndex);
+    if (!src) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.removeAttribute("data-key");
+      return;
+    }
+    if (audio.getAttribute("data-key") !== cacheKey(currentIndex)) {
+      audio.src = src;
+      audio.setAttribute("data-key", cacheKey(currentIndex));
+      audio.currentTime = 0;
+    } else if (restart) {
+      audio.currentTime = 0;
+    }
+    if (playing) audio.play().catch(() => {});
+  }
+
+  // Move the ribbon by `delta` stations, then resync audio from the start.
+  function gotoTrack(delta) {
+    step(delta);
+    syncAudio(true);
+  }
+
+  function transportNext() {
+    const r = scanAudio(direction);
+    if (r) gotoTrack(direction * r.dist);
+  }
+
+  function transportPrev() {
+    // Past the restart threshold, "previous" rewinds the current track.
+    if (srcFor(currentIndex) && audio.currentTime > PREV_RESTART_S) {
+      audio.currentTime = 0;
+      if (playing) audio.play().catch(() => {});
+      return;
+    }
+    const r = scanAudio(-direction);
+    if (r) gotoTrack(-direction * r.dist);
+  }
+
+  audio.addEventListener("ended", transportNext);
 
   /* loop direction --------------------------------------------------------- */
   function setLoop(isInner) {
+    const changed = direction !== (isInner ? +1 : -1);
     direction = isInner ? +1 : -1;
     innerBtn.classList.toggle("on", isInner);
     outerBtn.classList.toggle("on", !isInner);
+    // Switching loops swaps to the other playlist's recording for this
+    // station and starts it from the top. syncAudio only calls play() when
+    // `playing` is set, so a playing deck autostarts the new track while a
+    // paused deck just arms it silently — matching the current transport state.
+    if (changed) syncAudio(true);
   }
 
-  /* play / pause (visual only until audio is wired up) --------------------- */
+  /* play / pause ----------------------------------------------------------- */
   function togglePlay() {
     playing = !playing;
     playBtn.classList.toggle("playing", playing);
+    if (playing) syncAudio(false);   // resume current track (or start it)
+    else audio.pause();
   }
 
   /* wire up ---------------------------------------------------------------- */
-  document.getElementById("prev").addEventListener("click", prev);
-  document.getElementById("next").addEventListener("click", next);
+  document.getElementById("prev").addEventListener("click", transportPrev);
+  document.getElementById("next").addEventListener("click", transportNext);
   playBtn.addEventListener("click", togglePlay);
   innerBtn.addEventListener("click", () => setLoop(true));
   outerBtn.addEventListener("click", () => setLoop(false));
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowRight") { e.preventDefault(); next(); }
-    else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+    if (e.key === "ArrowRight") { e.preventDefault(); transportNext(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); transportPrev(); }
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }
   });
 
-  // swipe to scrub
+  // swipe to scrub — manual one-station browse that keeps audio in sync
   let touchY = null;
   stage.addEventListener("touchstart", (e) => { touchY = e.touches[0].clientY; }, { passive: true });
   stage.addEventListener("touchend", (e) => {
@@ -207,7 +294,7 @@
     const dy = e.changedTouches[0].clientY - touchY;
     // Move stations in the direction of the swipe regardless of loop mode:
     // swipe up pulls the next station up into place, swipe down the previous.
-    if (Math.abs(dy) > 44) { step(dy < 0 ? +1 : -1); }
+    if (Math.abs(dy) > 44) { step(dy < 0 ? +1 : -1); syncAudio(true); }
     touchY = null;
   }, { passive: true });
 

@@ -2,8 +2,8 @@
 // Inner loop runs in ascending JY order; outer loop descends.
 // The line is circular: after JY30 (Yūrakuchō) comes JY01 (Tōkyō).
 window.YAMANOTE_STATIONS = [
-  { jy: "01", name: "Tōkyō",            kanji: "東京" },
-  { jy: "02", name: "Kanda",            kanji: "神田" },
+  { jy: "01", name: "Tōkyō",            kanji: "東京",   audio: { inner: "uploads/inner-JY01-Tokyo.opus",      outer: "uploads/outer-JY01-Tokyo.opus" } },
+  { jy: "02", name: "Kanda",            kanji: "神田",   audio: { inner: "uploads/inner-JY02-Kanda.opus",      outer: "uploads/outer-JY02-Kanda.opus" } },
   { jy: "03", name: "Akihabara",        kanji: "秋葉原" },
   { jy: "04", name: "Okachimachi",      kanji: "御徒町" },
   { jy: "05", name: "Ueno",             kanji: "上野" },
@@ -31,5 +31,5 @@ window.YAMANOTE_STATIONS = [
   { jy: "27", name: "Tamachi",          kanji: "田町" },
   { jy: "28", name: "Hamamatsuchō",     kanji: "浜松町" },
   { jy: "29", name: "Shimbashi",        kanji: "新橋" },
-  { jy: "30", name: "Yūrakuchō",        kanji: "有楽町" },
+  { jy: "30", name: "Yūrakuchō",        kanji: "有楽町", audio: { inner: "uploads/inner-JY30-Yurakucho.opus", outer: "uploads/outer-JY30-Yurakucho.opus" } },
 ];

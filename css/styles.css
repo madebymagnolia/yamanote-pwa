@@ -32,6 +32,11 @@ html, body {
   height: 100%;
   background: var(--bg);
   overscroll-behavior: none;
+  /* disable the double-tap-to-zoom gesture (iOS ignores user-scalable=no).
+     In Safari it stops the zoom; in the installed PWA it prevents the
+     standalone viewport from snapping to a zoomed, mis-aligned state where
+     the controls fall out from under your taps. */
+  touch-action: manipulation;
 }
 
 body {
@@ -57,6 +62,7 @@ body {
   height: calc(100dvh + env(safe-area-inset-top, 0px));  /* dynamic vh */
   overflow: hidden;
   background: var(--bg);
+  touch-action: manipulation;
 }
 
 .stage {

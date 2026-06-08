@@ -73,11 +73,15 @@
 
   /* layout maths ----------------------------------------------------------- */
   function measure() {
-    const stageRect  = stage.getBoundingClientRect();
-    const toggleRect = document.querySelector(".toggle").getBoundingClientRect();
-    const ctrlRect   = document.querySelector(".controls").getBoundingClientRect();
-    const T = toggleRect.bottom - stageRect.top;   // band top  (below toggle)
-    const C = ctrlRect.top      - stageRect.top;   // band bottom (above controls)
+    const toggleEl = document.querySelector(".toggle");
+    const ctrlEl   = document.querySelector(".controls");
+    // Use layout geometry (offsetTop/offsetHeight), NOT getBoundingClientRect:
+    // during boot the toggle and controls are parked off-screen by CSS
+    // transforms, and rect-based measurement would read those transformed
+    // positions — placing prev/next behind the chrome. offset* ignores
+    // transforms, so the band is always measured against the resting layout.
+    const T = toggleEl.offsetTop + toggleEl.offsetHeight;  // band top (below toggle)
+    const C = ctrlEl.offsetTop;                            // band bottom (above controls)
     const mid = (T + C) / 2;
     dotPeriod = 10;
 
@@ -219,12 +223,27 @@
   });
 
   /* boot ------------------------------------------------------------------- */
+  // Reveal once: drops the .booting class so the ribbon fades in while the
+  // toggle slides down from above and the controls slide up from below — all
+  // together. We wait for the final (post-font) layout to be painted hidden,
+  // then flip on the next frame so the entrance transition actually fires.
+  let revealed = false;
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => document.body.classList.remove("booting"));
+    });
+  }
+
   build();
   measure();
   layout(false);
   setLoop(true);
 
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => { measure(); layout(false); });
+    document.fonts.ready.then(() => { measure(); layout(false); reveal(); });
   }
+  // Fallback: never leave the UI parked off-screen if fonts stall.
+  window.setTimeout(reveal, 1500);
 })();

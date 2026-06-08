@@ -1,10 +1,10 @@
 /* Yamanote Line PWA — offline app shell */
-const CACHE = "yamanote-v17";
+const CACHE = "yamanote-v18";
 const ASSETS = [
   "index.html",
-  "css/styles.css?v=17",
-  "js/stations.js?v=17",
-  "js/app.js?v=17",
+  "css/styles.css?v=18",
+  "js/stations.js?v=18",
+  "js/app.js?v=18",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",

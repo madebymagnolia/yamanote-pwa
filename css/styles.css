@@ -227,7 +227,7 @@ body {
 .toggle .divider {
   width: 1px;
   align-self: stretch;
-  margin: 8px 0;
+  margin: 8px 0 8px 3px;
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -239,7 +239,7 @@ body {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 38px;
+  gap: 24px;
   z-index: 5;
 }
 
@@ -255,8 +255,8 @@ body {
 .ctrl svg { display: block; }
 
 .ctrl.skip {
-  width: 53px;
-  height: 53px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: linear-gradient(180deg, var(--ctrl-top), var(--ctrl-bot));
   box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);

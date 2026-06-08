@@ -27,12 +27,12 @@
   let currentIndex = 26;              // open on Tamachi (JY27 → array index 26)
   let direction = +1;                 // inner loop ascends; outer descends
   let playing = false;
-  let busy = false;
+  let spineOffset = 0;                // accumulated dotted-line scroll
 
   // computed in measure()
   let nameCenter = 0, prevCenter = 0, nextCenter = 0;
   let upGap = 0, downGap = 0;
-  let dotPeriod = 12, lineStep = 120;
+  let dotPeriod = 10, lineStep = 120;
 
   /* build the station elements (one copy — looping is modular) ------------- */
   const items = [];
@@ -79,21 +79,21 @@
     const T = toggleRect.bottom - stageRect.top;   // band top  (below toggle)
     const C = ctrlRect.top      - stageRect.top;   // band bottom (above controls)
     const mid = (T + C) / 2;
-
-    // current block centred in the band; its name sits at the block's bottom
-    const blockTop = mid - BLOCK / 2;
-    const blockBottom = mid + BLOCK / 2;
-    nameCenter = blockBottom - NAME / 2;            // = mid + 56
-
-    // prev / next centred in the equal spaces above / below the block
-    prevCenter = (T + blockTop) / 2;
-    nextCenter = (blockBottom + C) / 2;
-
-    upGap   = nameCenter - prevCenter;              // travel above (larger)
-    downGap = nextCenter - nameCenter;              // travel below (smaller)
-
-    // dotted line: dense, evenly spaced; scrolls by a whole number of dots
     dotPeriod = 10;
+
+    // Role-based spacing: the current block (JY box + name) is centred in the
+    // band. The previous name is centred in the space above the block (between
+    // the toggle and the box); the next name is centred in the space below it
+    // (between the current name and the controls).
+    const blockTop    = mid - BLOCK / 2;
+    const blockBottom = mid + BLOCK / 2;
+    nameCenter = blockBottom - NAME / 2;            // current name = block bottom
+    prevCenter = (T + blockTop) / 2;                // centred above the block
+    nextCenter = (blockBottom + C) / 2;             // centred below the block
+    upGap   = nameCenter - prevCenter;
+    downGap = nextCenter - nameCenter;
+
+    // the dotted line scrolls by the average name travel so it moves with them
     lineStep = Math.max(dotPeriod,
                Math.round(((upGap + downGap) / 2) / dotPeriod) * dotPeriod);
 
@@ -101,8 +101,8 @@
     document.documentElement.style.setProperty("--dot", dotPeriod + "px");
 
     if (spine) {
-      spine.style.top = "-1000px";
-      spine.style.height = (stage.clientHeight + 2000) + "px";
+      spine.style.top = "-3500px";
+      spine.style.height = (stage.clientHeight + 7000) + "px";
     }
   }
 
@@ -136,33 +136,36 @@
   }
 
   /* navigation ------------------------------------------------------------- */
+  // No lock: presses are never dropped. CSS transitions are interruptible, so
+  // tapping five times quickly re-targets the layout five stations along and
+  // the names ease straight to the final position — it feels instant.
   function step(delta) {
-    if (busy || delta === 0) return;
+    if (delta === 0) return;
     currentIndex = ((currentIndex + delta) % N + N) % N;
     layout(true);
 
-    // scroll the dotted line so the dots visibly travel with the names;
-    // lineStep is a whole number of dots, so snapping back to 0 afterwards
-    // is invisible on the uniform line
+    // scroll the dotted line so the dots visibly travel with the names. The
+    // offset accumulates across rapid presses; lineStep is a whole number of
+    // dots, so the eventual reset to 0 is invisible on the uniform line. We
+    // only reset once motion has settled (debounced after the last press).
     const dir = delta > 0 ? 1 : -1;
-    spine.style.transform = "translateY(" + (-dir * lineStep) + "px)";
+    spineOffset += -dir * lineStep;
+    spine.style.transform = "translateY(" + spineOffset + "px)";
 
-    busy = true;
     window.clearTimeout(step._t);
     step._t = window.setTimeout(() => {
-      busy = false;
       spine.classList.add("no-anim");
+      spineOffset = 0;
       spine.style.transform = "translateY(0)";
       void spine.offsetHeight;
       spine.classList.remove("no-anim");
-    }, DUR_MS);
+    }, DUR_MS + 60);
   }
 
   function next() { step(direction); }
   function prev() { step(-direction); }
 
   function jumpTo(i) {
-    if (busy) return;
     step(offsetOf(i));
   }
 
@@ -198,7 +201,9 @@
   stage.addEventListener("touchend", (e) => {
     if (touchY === null) return;
     const dy = e.changedTouches[0].clientY - touchY;
-    if (Math.abs(dy) > 44) { dy < 0 ? next() : prev(); }
+    // Move stations in the direction of the swipe regardless of loop mode:
+    // swipe up pulls the next station up into place, swipe down the previous.
+    if (Math.abs(dy) > 44) { step(dy < 0 ? +1 : -1); }
     touchY = null;
   }, { passive: true });
 

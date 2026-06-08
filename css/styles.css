@@ -26,6 +26,8 @@
 
   /* intro reveal — plays once, after the layout is measured */
   --intro-dur: 0.9s;
+  /* ribbon/stations fade a full second slower than the chrome slide-in */
+  --intro-fade-dur: 1.9s;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -101,7 +103,7 @@ body {
   right: 0;
   top: 0;
   height: 0;
-  transition: opacity var(--intro-dur) var(--ease);
+  transition: opacity var(--intro-fade-dur) var(--ease);
 }
 
 /* ── intro reveal ─────────────────────────────────────────────

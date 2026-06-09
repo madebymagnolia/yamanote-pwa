@@ -27,7 +27,7 @@ window.YAMANOTE_STATIONS = [
   { jy: "23", name: "Gotanda",          kanji: "五反田", audio: { inner: "uploads/inner-JY23-Gotanda.opus",      outer: "uploads/outer-JY23-Gotanda.opus" } },
   { jy: "24", name: "Ōsaki",            kanji: "大崎", audio: { inner: "uploads/inner-JY24-Osaki.opus",        outer: "uploads/outer-JY24-Osaki.opus" } },
   { jy: "25", name: "Shinagawa",        kanji: "品川", audio: { inner: "uploads/inner-JY25-Shinagawa.opus",    outer: "uploads/outer-JY25-Shinagawa.opus" } },
-  { jy: "26", name: "Takanawa Gateway", kanji: "高輪ゲートウェイ", audio: { inner: "uploads/inner-JY26-TakanawaGateway.opus", outer: "uploads/outer-JY26-TakanawaGateway.opus" } },
+  { jy: "26", name: "Takanawa Gateway", kanji: "高輪ゲートウェイ", audio: { inner: "uploads/inner-JY26-Takanawa-Gateway.opus", outer: "uploads/outer-JY26-Takanawa-Gateway.opus" } },
   { jy: "27", name: "Tamachi",          kanji: "田町", audio: { inner: "uploads/inner-JY27-Tamachi.opus",      outer: "uploads/outer-JY27-Tamachi.opus" } },
   { jy: "28", name: "Hamamatsuchō",     kanji: "浜松町", audio: { inner: "uploads/inner-JY28-Hamamatsucho.opus", outer: "uploads/outer-JY28-Hamamatsucho.opus" } },
   { jy: "29", name: "Shimbashi",        kanji: "新橋", audio: { inner: "uploads/inner-JY29-Shimbashi.opus",    outer: "uploads/outer-JY29-Shimbashi.opus" } },

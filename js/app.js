@@ -216,6 +216,9 @@
       el.src = src;
       // Only the audible element should auto-advance the playlist.
       el.addEventListener("ended", () => { if (el === current) transportNext(); });
+      // Keep the lock-screen scrubber in step with the audible track.
+      el.addEventListener("timeupdate",     () => { if (el === current) updatePositionState(); });
+      el.addEventListener("loadedmetadata", () => { if (el === current) updatePositionState(); });
       el.load();
       pool.set(key, el);
     }
@@ -261,10 +264,73 @@
     const el = elFor(currentIndex);
     if (current && current !== el) current.pause();
     current = el;
+    updateMediaSession();
     if (!el) return;
     if (restart) el.currentTime = 0;
     if (playing) el.play().catch(() => {});
     preloadNeighbors();
+  }
+
+  /* ───────────────────────────────────────────────────────────────────────
+     Media Session — surface the current track on the iOS lock screen /
+     Control Center (and Android / desktop) so the hardware + lock-screen
+     transport controls drive the player. Metadata reflects currentIndex:
+       · title ... "<current> → <next>" in the active loop direction
+       · artist .. "Yamanote Line"
+       · artwork . the JY station-number sign (js/artwork.js)
+     ─────────────────────────────────────────────────────────────────────── */
+  const hasMediaSession = "mediaSession" in navigator;
+
+  // The literal next stop on the line in the current loop direction (inner
+  // ascends JY, outer descends), wrapping around the loop.
+  function nextStopIndex() { return normIdx(currentIndex + direction); }
+
+  function updateMediaSession() {
+    if (!hasMediaSession) return;
+    const cur  = S[normIdx(currentIndex)];
+    const next = S[nextStopIndex()];
+    const art  = window.makeStationArtwork ? window.makeStationArtwork(cur.jy) : null;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title:  cur.name + " → " + next.name,
+      artist: "Yamanote Line",
+      album:  "Yamanote Line",
+      artwork: art ? [
+        { src: art, sizes: "512x512", type: "image/png" }
+      ] : []
+    });
+    navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+    updatePositionState();
+  }
+
+  function updatePositionState() {
+    if (!hasMediaSession || !navigator.mediaSession.setPositionState) return;
+    if (!current || !isFinite(current.duration) || current.duration <= 0) return;
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: current.duration,
+        playbackRate: current.playbackRate || 1,
+        position: Math.min(current.currentTime, current.duration)
+      });
+    } catch (e) { /* ignore out-of-range during transitions */ }
+  }
+
+  function setupMediaSession() {
+    if (!hasMediaSession) return;
+    const ms = navigator.mediaSession;
+    const set = (action, handler) => {
+      try { ms.setActionHandler(action, handler); } catch (e) { /* unsupported */ }
+    };
+    set("play",  () => { if (!playing) togglePlay(); });
+    set("pause", () => { if (playing)  togglePlay(); });
+    set("previoustrack", () => transportPrev());
+    set("nexttrack",     () => transportNext());
+    set("seekto", (d) => {
+      if (current && d && typeof d.seekTime === "number") {
+        current.currentTime = d.seekTime;
+        updatePositionState();
+      }
+    });
   }
 
   // Move the ribbon by `delta` stations, then resync audio from the start.
@@ -308,6 +374,7 @@
     playBtn.classList.toggle("playing", playing);
     if (playing) syncAudio(false);   // resume current track (or start it)
     else if (current) current.pause();
+    if (hasMediaSession) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
   }
 
   /* wire up ---------------------------------------------------------------- */
@@ -423,10 +490,17 @@
   measure();
   layout(false);
   setLoop(true);
+  setupMediaSession();
   syncAudio(false);   // arm the opening track + preload neighbours (no autoplay)
 
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => { measure(); layout(false); reveal(); });
+    document.fonts.ready.then(() => {
+      measure(); layout(false); reveal();
+      // The opening artwork may have been drawn with a fallback font before
+      // Space Grotesk loaded — rebuild it now and refresh the metadata.
+      if (window.makeStationArtwork) window.makeStationArtwork(S[normIdx(currentIndex)].jy, { force: true });
+      updateMediaSession();
+    });
   }
   // Fallback: never leave the UI parked off-screen if fonts stall.
   window.setTimeout(reveal, 1500);

@@ -289,7 +289,7 @@
     if (!hasMediaSession) return;
     const cur  = S[normIdx(currentIndex)];
     const next = S[nextStopIndex()];
-    const art  = window.makeStationArtwork ? window.makeStationArtwork(cur.jy) : null;
+    const art  = cur.artwork;
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title:  cur.name + " → " + next.name,
@@ -494,13 +494,7 @@
   syncAudio(false);   // arm the opening track + preload neighbours (no autoplay)
 
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
-      measure(); layout(false); reveal();
-      // The opening artwork may have been drawn with a fallback font before
-      // Space Grotesk loaded — rebuild it now and refresh the metadata.
-      if (window.makeStationArtwork) window.makeStationArtwork(S[normIdx(currentIndex)].jy, { force: true });
-      updateMediaSession();
-    });
+    document.fonts.ready.then(() => { measure(); layout(false); reveal(); });
   }
   // Fallback: never leave the UI parked off-screen if fonts stall.
   window.setTimeout(reveal, 1500);

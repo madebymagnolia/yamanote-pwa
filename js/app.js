@@ -182,8 +182,6 @@
        · track ends ...... auto-advance to the next track (loops forever)
      currentIndex is the single source of truth; audio always reflects it.
      ─────────────────────────────────────────────────────────────────────── */
-  const audio = new Audio();
-  audio.preload = "auto";
   const PREV_RESTART_S = 3;
 
   const normIdx = (i) => ((i % N) + N) % N;
@@ -197,6 +195,55 @@
   };
   const cacheKey = (i) => loopKey() + ":" + normIdx(i);
 
+  // ── preloading pool ────────────────────────────────────────────────────
+  // One <audio> element per (loop, station) track, kept warm so transitions
+  // are gapless: the moment a track ends or the user hits next/prev, the
+  // neighbour is already fully buffered and decoded, so .play() starts it with
+  // no load/seek hitch. We hold the current track plus its next/prev neighbours
+  // (in loop order) and the same station's track on the *other* loop, so loop
+  // toggles are seamless too. `current` is the element that's actually audible.
+  const pool = new Map();        // cacheKey → HTMLAudioElement
+  let current = null;
+
+  function elFor(i) {
+    const src = srcFor(i);
+    if (!src) return null;
+    const key = cacheKey(i);
+    let el = pool.get(key);
+    if (!el) {
+      el = new Audio();
+      el.preload = "auto";
+      el.src = src;
+      // Only the audible element should auto-advance the playlist.
+      el.addEventListener("ended", () => { if (el === current) transportNext(); });
+      el.load();
+      pool.set(key, el);
+    }
+    return el;
+  }
+
+  // Warm the tracks the user is most likely to reach next: the next and prev
+  // stations on this loop, and this station's counterpart on the other loop.
+  function preloadNeighbors() {
+    const nx = scanAudio(direction);
+    const pv = scanAudio(-direction);
+    if (nx) elFor(currentIndex + direction * nx.dist);
+    if (pv) elFor(currentIndex - direction * pv.dist);
+    const other = (direction === +1 ? "outer" : "inner");
+    const a = S[normIdx(currentIndex)].audio;
+    if (a && a[other]) {
+      const k = other + ":" + normIdx(currentIndex);
+      if (!pool.has(k)) {
+        const el = new Audio();
+        el.preload = "auto";
+        el.src = a[other];
+        el.addEventListener("ended", () => { if (el === current) transportNext(); });
+        el.load();
+        pool.set(k, el);
+      }
+    }
+  }
+
   // Scan from the current station in `dir` for the nearest station that has a
   // track on the ACTIVE loop.
   function scanAudio(dir) {
@@ -207,25 +254,17 @@
     return null;
   }
 
-  // Point the <audio> at the current station. `restart` rewinds to 0. If the
-  // user intends playback (`playing`) and the station has a track, it plays;
-  // a silent station just goes quiet while the play intent is preserved.
+  // Make the current station's track the audible one. `restart` rewinds it to
+  // the top. Plays only when the user intends playback, so a paused deck just
+  // arms the track silently. Pauses whatever was playing before.
   function syncAudio(restart) {
-    const src = srcFor(currentIndex);
-    if (!src) {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.removeAttribute("data-key");
-      return;
-    }
-    if (audio.getAttribute("data-key") !== cacheKey(currentIndex)) {
-      audio.src = src;
-      audio.setAttribute("data-key", cacheKey(currentIndex));
-      audio.currentTime = 0;
-    } else if (restart) {
-      audio.currentTime = 0;
-    }
-    if (playing) audio.play().catch(() => {});
+    const el = elFor(currentIndex);
+    if (current && current !== el) current.pause();
+    current = el;
+    if (!el) return;
+    if (restart) el.currentTime = 0;
+    if (playing) el.play().catch(() => {});
+    preloadNeighbors();
   }
 
   // Move the ribbon by `delta` stations, then resync audio from the start.
@@ -241,16 +280,14 @@
 
   function transportPrev() {
     // Past the restart threshold, "previous" rewinds the current track.
-    if (srcFor(currentIndex) && audio.currentTime > PREV_RESTART_S) {
-      audio.currentTime = 0;
-      if (playing) audio.play().catch(() => {});
+    if (current && srcFor(currentIndex) && current.currentTime > PREV_RESTART_S) {
+      current.currentTime = 0;
+      if (playing) current.play().catch(() => {});
       return;
     }
     const r = scanAudio(-direction);
     if (r) gotoTrack(-direction * r.dist);
   }
-
-  audio.addEventListener("ended", transportNext);
 
   /* loop direction --------------------------------------------------------- */
   function setLoop(isInner) {
@@ -258,9 +295,9 @@
     direction = isInner ? +1 : -1;
     innerBtn.classList.toggle("on", isInner);
     outerBtn.classList.toggle("on", !isInner);
-    // Switching loops swaps to the other playlist's recording for this
-    // station and starts it from the top. syncAudio only calls play() when
-    // `playing` is set, so a playing deck autostarts the new track while a
+    // Switching loops swaps to the other playlist's (preloaded) recording for
+    // this station and starts it from the top. syncAudio only calls play()
+    // when `playing` is set, so a playing deck autostarts the new track while a
     // paused deck just arms it silently — matching the current transport state.
     if (changed) syncAudio(true);
   }
@@ -270,7 +307,7 @@
     playing = !playing;
     playBtn.classList.toggle("playing", playing);
     if (playing) syncAudio(false);   // resume current track (or start it)
-    else audio.pause();
+    else if (current) current.pause();
   }
 
   /* wire up ---------------------------------------------------------------- */
@@ -286,16 +323,62 @@
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }
   });
 
-  // swipe to scrub — manual one-station browse that keeps audio in sync
-  let touchY = null;
-  stage.addEventListener("touchstart", (e) => { touchY = e.touches[0].clientY; }, { passive: true });
-  stage.addEventListener("touchend", (e) => {
-    if (touchY === null) return;
-    const dy = e.changedTouches[0].clientY - touchY;
-    // Move stations in the direction of the swipe regardless of loop mode:
-    // swipe up pulls the next station up into place, swipe down the previous.
-    if (Math.abs(dy) > 44) { step(dy < 0 ? +1 : -1); syncAudio(true); }
+  // swipe to scrub — the ribbon tracks the finger for a short distance, then
+  // commits to the next/previous station on release (or springs back). Because
+  // the dotted spine and every station live inside #ribbon, translating the
+  // ribbon previews the move with everything moving together; on release we
+  // hand off into the normal step() animation (or ease the offset back to 0).
+  const FOLLOW_MAX = 104;   // hard cap on how far the ribbon follows the finger
+  const FOLLOW_LIN = 64;    // 1:1 zone before resistance kicks in
+  const COMMIT_PX  = 40;    // release past this distance commits a step
+  const COMMIT_V   = 0.55;  // …or a flick faster than this (px/ms) commits
+
+  let touchY = null, lastY = 0, lastT = 0, vel = 0, dragging = false;
+
+  // 1:1 near zero, easing toward FOLLOW_MAX so the ribbon never runs away
+  function follow(dy) {
+    const s = dy < 0 ? -1 : 1, a = Math.abs(dy);
+    if (a <= FOLLOW_LIN) return dy;
+    const over = a - FOLLOW_LIN, span = FOLLOW_MAX - FOLLOW_LIN;
+    return s * (FOLLOW_LIN + span * (1 - Math.exp(-over / span)));
+  }
+
+  stage.addEventListener("touchstart", (e) => {
+    touchY = lastY = e.touches[0].clientY;
+    lastT = e.timeStamp; vel = 0; dragging = true;
+    ribbon.classList.add("dragging");      // track the finger with no easing
+  }, { passive: true });
+
+  stage.addEventListener("touchmove", (e) => {
+    if (!dragging) return;
+    const y = e.touches[0].clientY;
+    const dt = e.timeStamp - lastT;
+    if (dt > 0) vel = (y - lastY) / dt;     // instantaneous velocity (px/ms)
+    lastY = y; lastT = e.timeStamp;
+    ribbon.style.transform = "translateY(" + follow(y - touchY) + "px)";
+  }, { passive: true });
+
+  function endDrag(endY) {
+    if (!dragging) return;
+    dragging = false;
+    const dy = endY - touchY;
     touchY = null;
+    ribbon.classList.remove("dragging");    // re-arm the transform transition
+    ribbon.style.transform = "translateY(0)";   // spring back / hand off
+    const commit = Math.abs(dy) > COMMIT_PX || Math.abs(vel) > COMMIT_V;
+    if (commit) {
+      // swipe up pulls the next station up; swipe down the previous
+      const dir = dy < 0 ? +1 : -1;
+      step(dir); syncAudio(true);
+    }
+  }
+
+  stage.addEventListener("touchend", (e) => endDrag(e.changedTouches[0].clientY), { passive: true });
+  stage.addEventListener("touchcancel", () => {
+    if (!dragging) return;
+    dragging = false; touchY = null;
+    ribbon.classList.remove("dragging");
+    ribbon.style.transform = "translateY(0)";
   }, { passive: true });
 
   let rt;
@@ -327,6 +410,7 @@
   measure();
   layout(false);
   setLoop(true);
+  syncAudio(false);   // arm the opening track + preload neighbours (no autoplay)
 
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => { measure(); layout(false); reveal(); });

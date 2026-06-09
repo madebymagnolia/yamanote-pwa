@@ -103,8 +103,11 @@ body {
   right: 0;
   top: 0;
   height: 0;
-  transition: opacity var(--intro-fade-dur) var(--ease);
+  transition: opacity var(--intro-fade-dur) var(--ease),
+              transform var(--dur) var(--ease);
 }
+/* while a finger is down the ribbon must track instantly (no easing lag) */
+.ribbon.dragging { transition: opacity var(--intro-fade-dur) var(--ease); }
 
 /* ── intro reveal ─────────────────────────────────────────────
    While booting, the chrome is parked off-screen and the ribbon is

@@ -280,6 +280,13 @@
        · artwork . the JY station-number sign (js/artwork.js)
      ─────────────────────────────────────────────────────────────────────── */
   const hasMediaSession = "mediaSession" in navigator;
+  // iOS renders the lock-screen ±skip (seek) buttons instead of prev/next track
+  // icons whenever a track duration is reported via setPositionState — it treats
+  // the audio as long-form scrubbable content. Suppressing position state on iOS
+  // makes Safari fall back to the music-player layout with real prev/next icons.
+  const isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
+    (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1) ||
+    /iPhone|iPad|iPod/.test(navigator.userAgent);
 
   // The literal next stop on the line in the current loop direction (inner
   // ascends JY, outer descends), wrapping around the loop.
@@ -304,7 +311,7 @@
   }
 
   function updatePositionState() {
-    if (!hasMediaSession || !navigator.mediaSession.setPositionState) return;
+    if (!hasMediaSession || isIOS || !navigator.mediaSession.setPositionState) return;
     if (!current || !isFinite(current.duration) || current.duration <= 0) return;
     try {
       navigator.mediaSession.setPositionState({
@@ -426,6 +433,11 @@
 
   stage.addEventListener("touchmove", (e) => {
     if (!dragging || committed) return;
+    // The body is pinned (position:fixed) so the page can't actually scroll,
+    // but iOS Safari still flashes its scrollbar indicator on a vertical
+    // touch-drag unless the gesture is explicitly consumed. This listener is
+    // non-passive precisely so we can preventDefault and stop that flash.
+    if (e.cancelable) e.preventDefault();
     const y = e.touches[0].clientY;
     const dt = e.timeStamp - lastT;
     if (dt > 0) vel = (y - lastY) / dt;     // instantaneous velocity (px/ms)
@@ -439,7 +451,7 @@
       return;
     }
     ribbon.style.transform = "translateY(" + follow(dy) + "px)";
-  }, { passive: true });
+  }, { passive: false });
 
   function endDrag(endY) {
     if (!dragging) return;

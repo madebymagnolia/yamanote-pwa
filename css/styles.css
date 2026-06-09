@@ -69,6 +69,7 @@ html, body {
   height: 100vh;
   background: var(--bg);
   overscroll-behavior: none;
+  overflow: hidden;
   /* disable the double-tap-to-zoom gesture (iOS ignores user-scalable=no).
      In Safari it stops the zoom; in the installed PWA it prevents the
      standalone viewport from snapping to a zoomed, mis-aligned state where
@@ -82,6 +83,12 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   user-select: none;
+  /* pin the body to the viewport so a touch-swipe can never scroll the page
+     (which is what flashes the iOS scrollbar). .app is position:fixed, so
+     fixing the body too doesn't affect its layout. */
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 /* full-bleed app surface, centred on a phone-width column.

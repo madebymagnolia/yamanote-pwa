@@ -8,11 +8,29 @@
    ─────────────────────────────────────────────────────────── */
 
 :root {
-  --bg:        rgb(25, 25, 23);
-  --green:     rgb(40, 163, 81);
-  --ctrl-top:  rgb(71, 71, 69);
-  --ctrl-bot:  rgb(53, 53, 51);
-  --dim:       rgba(255, 255, 255, 0.30);
+  /* ── themeable surface tokens (dark is the default) ──────────────
+     Light mode is applied via html[data-theme="light"] below; the app
+     boot script stamps the attribute before first paint (no flash). */
+  --bg:        rgb(25, 25, 23);     /* warm near-black surface         */
+  --fg:        #fff;                /* primary text / active icons     */
+  --panel:     rgb(34, 34, 31);     /* elevated surface (info modal)   */
+  --panel-edge: rgba(255, 255, 255, 0.07);
+  --green:     rgb(40, 163, 81);    /* JR green — constant in both modes */
+  --ctrl-top:  rgb(71, 71, 69);     /* button gradient — top stop      */
+  --ctrl-bot:  rgb(53, 53, 51);     /* button gradient — bottom stop   */
+  --ctrl-ring: rgba(255, 255, 255, 0.2);   /* inset top highlight      */
+  --ctrl-shadow: 0 0 0 0 transparent;       /* extra lift in light mode */
+  /* control surface as gradient tokens so the pressed state can flip the
+     gradient vertically. --ctrl-bg-active is the same stops, reversed. */
+  --ctrl-bg:        linear-gradient(180deg, var(--ctrl-top), var(--ctrl-bot));
+  --ctrl-bg-active: linear-gradient(180deg, var(--ctrl-bot), var(--ctrl-top));
+  --ctrl-inset:     inset 0 1px 0 0 var(--ctrl-ring);   /* edge highlights */
+  --ctrl-blur:      none;                                /* glass blur (light only) */
+  --dim:       rgba(255, 255, 255, 0.30);   /* inactive text            */
+  --spine:     rgba(255, 255, 255, 0.30);   /* dotted-line dots         */
+
+  /* corner padding for the desktop dark-mode / info buttons */
+  --corner-pad: 36px;
 
   --badge:     96px;    /* JY number box — ALWAYS 96×96, never scales   */
   --dot:       10px;    /* dotted-line period (set by JS)               */
@@ -23,6 +41,7 @@
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --dur:  0.62s;
+  --theme-dur: 0.45s;   /* dark/light cross-fade duration (central, tunable) */
 
   /* intro reveal — plays once, after the layout is measured */
   --intro-dur: 0.9s;
@@ -39,7 +58,29 @@
   --controls-bottom: max(20px, env(safe-area-inset-bottom, 0px) + 16px);
 }
 
-/* ── installed PWA (Home Screen, fullscreen) ──────────────────────
+/* ── light mode ───────────────────────────────────────────────────
+   Warm near-white surface, warm near-black ink — the dark palette
+   inverted while the JR green accent stays put. Only the surface
+   tokens change; every rule below reads them, so the whole app
+   (ribbon, badges, eraser, halo, buttons, modal) re-themes at once. */
+html[data-theme="light"] {
+  --bg:        rgb(242, 241, 237);   /* warm near-white — figma surface  */
+  --fg:        rgb(25, 25, 23);
+  --panel:     rgb(252, 251, 248);
+  --panel-edge: rgba(25, 25, 23, 0.08);
+  /* figma "glass" control: a translucent grey gradient over the bg, frosted
+     with a backdrop blur, edged with a white top highlight and a dark hairline
+     at the bottom. A soft drop-shadow keeps it lifted off the near-white bg. */
+  --ctrl-bg:        linear-gradient(180deg, rgba(204, 204, 204, 0.2) 0%, rgba(102, 102, 102, 0.2) 100%);
+  --ctrl-bg-active: linear-gradient(180deg, rgba(102, 102, 102, 0.2) 0%, rgba(204, 204, 204, 0.2) 100%);
+  --ctrl-inset:     inset 0 1px 0 0 rgb(255, 255, 255), inset 0 -1px 0 0 rgba(25, 25, 23, 0.3);
+  --ctrl-blur:      blur(16px);
+  --ctrl-shadow: 0 4px 18px rgba(25, 25, 23, 0.16), 0 1px 4px rgba(25, 25, 23, 0.12);
+  --dim:       rgba(25, 25, 23, 0.3);
+  --spine:     rgba(25, 25, 23, 0.22);
+}
+
+/* installed PWA (Home Screen, fullscreen) ─────────────────────────
    Detected two ways for maximum coverage: the standalone display-mode
    media query (iOS 16.4+) and a `standalone` class that app boot stamps
    on <html> via navigator.standalone (older iOS). Either one wins.
@@ -68,6 +109,7 @@ html, body {
   margin: 0;
   height: 100vh;
   background: var(--bg);
+  transition: background-color var(--theme-dur, 0.45s) var(--ease);
   overscroll-behavior: none;
   overflow: hidden;
   /* disable the double-tap-to-zoom gesture (iOS ignores user-scalable=no).
@@ -79,7 +121,9 @@ html, body {
 
 body {
   font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #fff;
+  color: var(--fg);
+  transition: color var(--theme-dur, 0.45s) var(--ease),
+              background-color var(--theme-dur, 0.45s) var(--ease);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   user-select: none;
@@ -106,6 +150,7 @@ body {
   height: calc(100dvh + env(safe-area-inset-top, 0px));  /* dynamic vh */
   overflow: hidden;
   background: var(--bg);
+  transition: background-color var(--theme-dur, 0.45s) var(--ease);
   touch-action: manipulation;
 }
 
@@ -126,9 +171,10 @@ body {
   width: 4px;
   margin-left: -2px;
   transform: translateY(0);
-  transition: transform var(--dur) var(--ease);
+  transition: transform var(--dur) var(--ease),
+              opacity var(--theme-dur, 0.45s) var(--ease);
   background-image: radial-gradient(circle at center,
-                    rgba(255, 255, 255, 0.30) 1.5px, transparent 2px);
+                    var(--spine) 1.5px, transparent 2px);
   background-size: 4px var(--dot, 10px);
   background-repeat: repeat-y;
   pointer-events: none;
@@ -178,6 +224,15 @@ body.booting .controls {
 }
 .station.far .name { pointer-events: none; }
 
+/* Make station text bolder in light mode to compensate for the higher contrast. In dark mode the text is already quite punchy, so 500
+   is plenty; in light mode the same weight looks thinner, so we boost it
+   to 700. The JY badge text gets the same boost to keep it visually balanced. */
+html[data-theme="light"] .station.active .name,
+html[data-theme="light"] .station.active .badge .jy,
+html[data-theme="light"] .station.active .badge .num { 
+  font-weight: 700; 
+}
+
 /* a bg-coloured block that erases the dotted line around this
    station's content, leaving a clean vertical gap. It grows when
    the station becomes active to clear the name AND the JY badge. */
@@ -190,7 +245,8 @@ body.booting .controls {
   top: -24px;            /* 12px name half + 12px gap          */
   height: 48px;
   transition: top var(--dur) var(--ease),
-              height var(--dur) var(--ease);
+              height var(--dur) var(--ease),
+              background-color var(--theme-dur, 0.45s) var(--ease);
   pointer-events: none;
 }
 .station.active .eraser {
@@ -220,7 +276,7 @@ body.booting .controls {
 }
 
 .station.active .name {
-  color: #fff;
+  color: var(--fg);
   transform: translateY(-50%) scale(1);
   cursor: default;
 }
@@ -257,6 +313,7 @@ body.booting .controls {
   align-items: center;
   justify-content: center;
   gap: 1px;
+  transition: background-color var(--theme-dur, 0.45s) var(--ease);
 }
 .badge .jy {
   font-size: 22px;
@@ -280,10 +337,13 @@ body.booting .controls {
   display: flex;
   align-items: stretch;
   border-radius: 115px;
-  background: linear-gradient(180deg, var(--ctrl-top), var(--ctrl-bot));
-  box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  background: var(--ctrl-bg);
+  -webkit-backdrop-filter: var(--ctrl-blur);
+  backdrop-filter: var(--ctrl-blur);
+  box-shadow: var(--halo), var(--ctrl-shadow), var(--ctrl-inset);
   z-index: 5;
-  transition: transform var(--intro-dur) var(--ease);
+  transition: transform var(--intro-dur) var(--ease),
+              box-shadow var(--theme-dur, 0.45s) var(--ease);
 }
 .toggle button {
   position: relative;
@@ -300,12 +360,13 @@ body.booting .controls {
   cursor: pointer;
   transition: color 0.35s var(--ease);
 }
-.toggle button.on { color: #fff; }
+.toggle button.on { color: var(--fg); }
 .toggle .divider {
   width: 1px;
   align-self: stretch;
   margin: 8px 0 8px 3px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--dim);
+  opacity: 0.5;
 }
 
 /* ── bottom media controls ────────────────────────────────── */
@@ -328,7 +389,7 @@ body.booting .controls {
   display: grid;
   place-items: center;
   cursor: pointer;
-  color: #fff;
+  color: var(--fg);
 }
 .ctrl svg { display: block; }
 
@@ -336,29 +397,253 @@ body.booting .controls {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(180deg, var(--ctrl-top), var(--ctrl-bot));
-  box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
-  transition: transform 0.18s var(--ease), filter 0.2s var(--ease);
+  background: var(--ctrl-bg);
+  -webkit-backdrop-filter: var(--ctrl-blur);
+  backdrop-filter: var(--ctrl-blur);
+  /* box-shadow: var(--halo), var(--ctrl-shadow), var(--ctrl-inset); */
+  box-shadow: var(--halo), var(--ctrl-inset);
+  transition: transform 0.18s var(--ease), filter 0.2s var(--ease),
+              box-shadow var(--theme-dur, 0.45s) var(--ease);
 }
 .ctrl.play {
   width: 96px;
   height: 96px;
   border-radius: 50%;
+  color: #fff;                 /* white glyph on JR green in both themes */
   background: var(--green);
   box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
   transition: transform 0.18s var(--ease);
 }
-.ctrl:active   { transform: scale(0.93); }
-.ctrl.skip:active { filter: brightness(1.25); }
+/* pressed feedback: shrink slightly and darken — consistent in both themes. */
+.ctrl:active   { transform: scale(0.9); }
+/* .ctrl.skip:active { filter: brightness(0.85); } */
 
 /* play / pause icon swap */
 .play .icon-pause { display: none; }
 .play.playing .icon-play  { display: none; }
 .play.playing .icon-pause { display: block; }
 
+/* sun / moon icon swap — dark mode shows the SUN (tap → lighten),
+   light mode shows the MOON (tap → darken). */
+.theme-toggle .icon-moon { display: none; }
+.theme-toggle .icon-sun  { display: block; }
+html[data-theme="light"] .theme-toggle .icon-sun  { display: none; }
+html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
+/* ── dark-mode toggle + info buttons ──────────────────────────────
+   Two extra .ctrl.skip buttons. They are positioned WITHOUT transform
+   (only left/right/bottom) so the shared .ctrl:active scale never
+   fights their placement. Default (mobile) layout flanks the play
+   button; the desktop media query relocates them to the corners. */
+.corner-ctrl {
+  position: absolute;
+  z-index: 5;
+  bottom: calc(var(--controls-bottom) + 16px);   /* centre 64px on 96px play */
+  transition: transform 0.18s var(--ease), filter 0.2s var(--ease),
+              background-color var(--theme-dur, 0.45s) var(--ease);
+}
+/* mobile: sit left & right of the play button (replacing prev/next).
+   play centre is the viewport centre; centre-to-centre spacing is
+   48 (play half) + 24 (gap) + 32 (skip half) = 104px. */
+.theme-toggle { left: calc(50% - 136px); }   /* left edge = centre − 104 − 32 */
+.info-btn     { left: calc(50% + 72px);  }    /* left edge = centre + 104 − 32 */
+
+/* mobile: swipe replaces prev/next, so hide them */
+@media (max-width: 639px) {
+  #prev, #next { display: none; }
+}
+
+/* desktop: keep prev/next in the centre row, banish toggle + info to
+   the bottom corners with comfortable edge padding (safe-area aware). */
+@media (min-width: 640px) {
+  .corner-ctrl {
+    bottom: max(var(--corner-pad), env(safe-area-inset-bottom, 0px) + 12px);
+  }
+  .theme-toggle {
+    left: max(var(--corner-pad), env(safe-area-inset-left, 0px) + 12px);
+  }
+  .info-btn {
+    left: auto;
+    right: max(var(--corner-pad), env(safe-area-inset-right, 0px) + 12px);
+  }
+}
+
+/* corner buttons slide up with the rest of the chrome on boot — a pure
+   transform slide (no opacity fade) so they move in perfect lock-step with
+   the playback controls instead of fading in ahead of them. They stay hidden
+   simply by being parked off-screen, exactly like .controls.
+   JS adds .intro before dropping .booting so the entrance uses
+   var(--intro-dur) rather than the 0.18s press duration. */
+body.booting .corner-ctrl {
+  transform: translateY(calc(100% + 160px));
+}
+.corner-ctrl.intro {
+  transition: transform var(--intro-dur) var(--ease),
+              filter 0.2s var(--ease),
+              background-color var(--theme-dur, 0.45s) var(--ease) !important;
+}
+
+/* ── info modal ───────────────────────────────────────────────── */
+.modal[hidden] { display: none; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+.modal.open .modal-backdrop { opacity: 1; }
+
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 416px;
+  max-height: calc(100dvh - 48px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--panel-edge);
+  border-radius: 24px;
+  padding: 34px 30px 32px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.5),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  transform: translateY(18px) scale(0.97);
+  opacity: 0;
+  transition: transform 0.38s var(--ease), opacity 0.38s var(--ease);
+}
+.modal.open .modal-card { transform: none; opacity: 1; }
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 0.2s var(--ease), background-color 0.2s var(--ease);
+}
+.modal-close:hover { opacity: 1; }
+
+/* small JY mark echoing the app icon */
+.modal-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 11px;
+  background: var(--green);
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+}
+.modal-mark span {
+  display: grid;
+  place-items: center;
+  width: calc(100% - 9px);
+  height: calc(100% - 9px);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+}
+
+.modal-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.modal-card h2 {
+  margin: 0 0 14px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.modal-card p {
+  margin: 0 0 14px;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--fg);
+  opacity: 0.78;
+  text-wrap: pretty;
+}
+.modal-divider {
+  height: 1px;
+  margin: 22px 0;
+  background: var(--panel-edge);
+  border: 0;
+}
+.modal-section-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--fg);
+  opacity: 0.5;
+  margin-bottom: 10px;
+}
+.modal-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border-radius: 14px;
+  background: var(--green);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: filter 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.modal-download:hover  { filter: brightness(1.08); }
+.modal-download:active { transform: scale(0.97); }
+.modal-download svg { display: block; }
+
+.modal-contact {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.5;
+  opacity: 0.78;
+}
+.modal-contact a {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 500;
+}
+.modal-contact a:hover { text-decoration: underline; }
+
 @media (prefers-reduced-motion: reduce) {
   .spine, .station, .station .name, .station .badge { transition-duration: 0.001s; }
   .ribbon, .toggle, .controls { transition-duration: 0.001s; }
-  body.booting .toggle   { transform: translateX(-50%); }
-  body.booting .controls { transform: translateX(-50%); }
+  body.booting .toggle      { transform: translateX(-50%); }
+  body.booting .controls    { transform: translateX(-50%); }
+  body.booting .corner-ctrl { transform: none; }
+  .corner-ctrl.intro        { transition-duration: 0.001s !important; }
+  .modal-backdrop, .modal-card { transition-duration: 0.001s; }
 }

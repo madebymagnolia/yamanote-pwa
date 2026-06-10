@@ -391,7 +391,102 @@
   innerBtn.addEventListener("click", () => setLoop(true));
   outerBtn.addEventListener("click", () => setLoop(false));
 
+  /* ── colour theme toggle ────────────────────────────────────────────────
+     The theme attribute is set on <html> by the inline boot script before
+     paint; here we just flip it, persist the choice, and keep the iOS status
+     bar (theme-color meta) and the button's label in sync. */
+  const themeBtn = document.getElementById("theme");
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  }
+  function applyTheme(theme) {
+    const changing = currentTheme() !== theme;
+    document.documentElement.setAttribute("data-theme", theme);
+    if (themeMeta) themeMeta.setAttribute("content", theme === "light" ? "#f2f1ed" : "#191917");
+    if (themeBtn) {
+      themeBtn.setAttribute("aria-label",
+        theme === "light" ? "Switch to dark mode" : "Switch to light mode");
+    }
+    // The dotted spine is painted with a CSS gradient, whose colour can't be
+    // transitioned — so on a theme flip it would SNAP to the new colour while
+    // every bg surface (page, station erasers, badge inners) cross-fades over
+    // --theme-dur, briefly exposing each eraser's rectangular edge where the
+    // snapped dots meet the still-fading background. To keep the whole switch
+    // seamless we hide the spine instantly, let its gradient swap under cover,
+    // then fade it back in over the same --theme-dur so dots and bg move as one.
+    if (changing && spine) {
+      spine.classList.add("no-anim");   // kill transitions for the instant hide
+      spine.style.opacity = "0";
+      void spine.offsetHeight;          // commit opacity:0 before re-enabling
+      spine.classList.remove("no-anim");
+      spine.style.opacity = "1";        // fades 0→1 over --theme-dur (CSS)
+    }
+    try { localStorage.setItem("yamanote-theme", theme); } catch (e) {}
+  }
+  applyTheme(currentTheme());   // sync label/meta with the booted attribute
+  if (themeBtn) {
+    themeBtn.addEventListener("click", () => {
+      applyTheme(currentTheme() === "light" ? "dark" : "light");
+    });
+  }
+
+  /* ── about / info modal ─────────────────────────────────────────────────
+     Opens a dialog over the player. Backdrop + ✕ + Esc close it; focus moves
+     into the card on open and returns to the info button on close, with a
+     light Tab trap so keyboard focus stays inside while it is open. */
+  const infoBtn   = document.getElementById("info");
+  const infoModal = document.getElementById("info-modal");
+  let modalOpen = false;
+  let lastFocus = null;
+
+  function focusables() {
+    return Array.from(infoModal.querySelectorAll(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((el) => el.offsetParent !== null);
+  }
+  function openModal() {
+    if (modalOpen) return;
+    modalOpen = true;
+    lastFocus = document.activeElement;
+    infoModal.hidden = false;
+    // next frame so the .open transition (backdrop fade + card rise) animates
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => infoModal.classList.add("open"));
+    });
+    const f = infoModal.querySelector(".modal-close");
+    if (f) f.focus();
+  }
+  function closeModal() {
+    if (!modalOpen) return;
+    modalOpen = false;
+    infoModal.classList.remove("open");
+    const done = () => {
+      infoModal.hidden = true;
+      infoModal.removeEventListener("transitionend", done);
+    };
+    infoModal.addEventListener("transitionend", done);
+    window.setTimeout(done, 420);   // fallback if transitionend is missed
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  if (infoBtn && infoModal) {
+    infoBtn.addEventListener("click", openModal);
+    infoModal.querySelectorAll("[data-close]").forEach((el) =>
+      el.addEventListener("click", closeModal));
+    infoModal.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        const f = focusables();
+        if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+  }
+
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalOpen) { e.preventDefault(); closeModal(); return; }
+    if (modalOpen) return;   // don't drive the transport while the dialog is up
     if (e.key === "ArrowRight") { e.preventDefault(); transportNext(); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); transportPrev(); }
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }
@@ -494,7 +589,19 @@
     if (revealed) return;
     revealed = true;
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => document.body.classList.remove("booting"));
+      requestAnimationFrame(() => {
+        // Add .intro to corner controls BEFORE dropping .booting so the
+        // transition spec switches to var(--intro-dur) at the same moment the
+        // translateY offset is cleared — giving them the same slide-up entrance
+        // as prev/next. The class is removed once the animation has settled so
+        // normal 0.18s press-response returns.
+        const cornerCtrls = document.querySelectorAll('.corner-ctrl');
+        cornerCtrls.forEach(el => el.classList.add('intro'));
+        document.body.classList.remove("booting");
+        window.setTimeout(() => {
+          cornerCtrls.forEach(el => el.classList.remove('intro'));
+        }, 1100);   // intro-dur (0.9s) + comfortable buffer
+      });
     });
   }
 

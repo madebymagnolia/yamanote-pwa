@@ -11,12 +11,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Yamanote" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192-0.2.png" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/styles.css?v=24" />
+<link rel="stylesheet" href="css/styles.css?v=30" />
 <script>
   /* Flag the installed/fullscreen PWA so the stylesheet can give it its own
      chrome spacing (navigator.standalone covers iOS versions that don't
@@ -25,6 +25,20 @@
       (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)) {
     document.documentElement.classList.add("standalone");
   }
+
+  /* Apply the saved (or system-preferred) colour theme BEFORE first paint so
+     there is never a flash of the wrong theme. The toggle button persists the
+     choice to localStorage; with no saved choice we follow the OS setting. */
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem("yamanote-theme"); } catch (e) {}
+    var prefersLight = window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: light)").matches;
+    var theme = saved || (prefersLight ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f2f1ed" : "#191917");
+  })();
 </script>
 </head>
 <body class="booting">
@@ -66,10 +80,93 @@
         </button>
       </div>
     </div>
+
+    <!-- dark / light theme toggle (mobile: left of play · desktop: bottom-left) -->
+    <button id="theme" class="ctrl skip corner-ctrl theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-sun" width="26" height="26" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.4" />
+        <line x1="12" y1="2.4" x2="12" y2="5" />
+        <line x1="12" y1="19" x2="12" y2="21.6" />
+        <line x1="4.2" y1="4.2" x2="6" y2="6" />
+        <line x1="18" y1="18" x2="19.8" y2="19.8" />
+        <line x1="2.4" y1="12" x2="5" y2="12" />
+        <line x1="19" y1="12" x2="21.6" y2="12" />
+        <line x1="4.2" y1="19.8" x2="6" y2="18" />
+        <line x1="18" y1="6" x2="19.8" y2="4.2" />
+      </svg>
+      <svg class="icon-moon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+      </svg>
+    </button>
+
+    <!-- info / about (mobile: right of play · desktop: bottom-right) -->
+    <button id="info" class="ctrl skip corner-ctrl info-btn" type="button"
+            aria-label="About this project" aria-haspopup="dialog">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5" />
+        <line x1="12" y1="11" x2="12" y2="16.5" />
+        <line x1="12" y1="7.6" x2="12.01" y2="7.6" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- about / info modal -->
+  <div class="modal" id="info-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+          <line x1="6" y1="6" x2="18" y2="18" />
+          <line x1="18" y1="6" x2="6" y2="18" />
+        </svg>
+      </button>
+
+      <div class="modal-mark"><span>JY</span></div>
+
+      <span class="modal-eyebrow">About</span>
+      <h2 id="info-title">Station Melodies</h2>
+      <p>
+        Every station on Tokyo's Yamanote Line plays its own short departure
+        melody &mdash; a <em>hassha</em> jingle that signals the doors are about
+        to close. This app collects all of them and lets you ride the loop like
+        a playlist, inner or outer, station by station.
+      </p>
+      <p>
+        <!-- Write about the idea behind the project here. -->
+        I built it as a love letter to those few seconds of sound that bookend
+        every journey. Swipe (or use the controls) to move between stations and
+        let the loop run on its own.
+      </p>
+
+      <hr class="modal-divider" />
+
+      <span class="modal-section-label">Take the melodies with you</span>
+      <a class="modal-download" href="#" download>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12" />
+          <path d="M7 11l5 5 5-5" />
+          <path d="M5 20h14" />
+        </svg>
+        Download the audio
+      </a>
+
+      <hr class="modal-divider" />
+
+      <span class="modal-section-label">Get in touch</span>
+      <p class="modal-contact">
+        Questions, corrections or just want to say hi?<br />
+        <a href="mailto:&#x70;&#x61;&#x75;&#x6C;&#x40;&#x6D;&#x61;&#x64;&#x65;&#x62;&#x79;&#x6D;&#x61;&#x67;&#x6E;&#x6F;&#x6C;&#x69;&#x61;&#x2E;&#x63;&#x6F;&#x6D;" target="_blank" rel="noopener noreferrer">&#x70;&#x61;&#x75;&#x6C;&#x40;&#x6D;&#x61;&#x64;&#x65;&#x62;&#x79;&#x6D;&#x61;&#x67;&#x6E;&#x6F;&#x6C;&#x69;&#x61;&#x2E;&#x63;&#x6F;&#x6D;</a>
+      </p>
+    </div>
   </div>
 
   <script src="js/stations.js?v=27"></script>
-  <script src="js/app.js?v=29"></script>
+  <script src="js/app.js?v=32"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

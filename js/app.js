@@ -157,9 +157,9 @@
     const dur      = segEnd - segStart;
     const progress = dur > 0 ? Math.min(1, Math.max(0, (t - segStart) / dur)) : 0;
 
-    // Past and current sections are fully green; future sections are dim.
+    // Only the active section is green; past and future sections are dim.
     scrubSegments.forEach(function (seg, i) {
-      seg.querySelector(".scrub-fill").style.width = (i <= si) ? "100%" : "0%";
+      seg.querySelector(".scrub-fill").style.width = (i === si) ? "100%" : "0%";
     });
 
     // Position head and update chip.

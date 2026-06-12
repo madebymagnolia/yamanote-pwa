@@ -25,7 +25,7 @@
   const outerBtn = document.getElementById("outer");
 
   let currentIndex = 30;              // open on Tokyo (JY01 → array index 01)
-  let direction = +1;                 // inner loop ascends; outer descends
+  let direction = +1;                 // outer loop ascends; inner loop descends
   let playing = false;
   let spineOffset = 0;                // accumulated dotted-line scroll
 
@@ -172,9 +172,9 @@
   }
 
   /* ───────────────────────────────────────────────────────────────────────
-     audio transport — the inner-loop playlist behaves like a repeating
+     audio transport — the outer-loop playlist behaves like a repeating
      Spotify playlist. The "playlist" is the set of stations that have an
-     audio file, walked in the current loop direction (inner ascends, outer
+     audio file, walked in the current loop direction (outer ascends, inner
      descends). With every station scored it degrades to a plain ±1 step.
        · next ............ skip to the next station that has audio, play it
        · prev (>3s in) ... restart the current track
@@ -188,7 +188,7 @@
   // Each station can carry a track per loop: audio: { inner, outer }. The
   // active playlist follows the current loop direction, so the same station
   // plays a different recording on the inner vs. outer loop.
-  const loopKey = () => (direction === +1 ? "inner" : "outer");
+  const loopKey = () => (direction === +1 ? "outer" : "inner");
   const srcFor  = (i) => {
     const a = S[normIdx(i)].audio;
     return (a && a[loopKey()]) || null;
@@ -232,7 +232,7 @@
     const pv = scanAudio(-direction);
     if (nx) elFor(currentIndex + direction * nx.dist);
     if (pv) elFor(currentIndex - direction * pv.dist);
-    const other = (direction === +1 ? "outer" : "inner");
+    const other = (direction === +1 ? "inner" : "outer");
     const a = S[normIdx(currentIndex)].audio;
     if (a && a[other]) {
       const k = other + ":" + normIdx(currentIndex);
@@ -288,8 +288,8 @@
     (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1) ||
     /iPhone|iPad|iPod/.test(navigator.userAgent);
 
-  // The literal next stop on the line in the current loop direction (inner
-  // ascends JY, outer descends), wrapping around the loop.
+  // The literal next stop on the line in the current loop direction (outer
+  // ascends JY, inner descends), wrapping around the loop.
   function nextStopIndex() { return normIdx(currentIndex + direction); }
 
   function updateMediaSession() {
@@ -364,8 +364,8 @@
 
   /* loop direction --------------------------------------------------------- */
   function setLoop(isInner) {
-    const changed = direction !== (isInner ? +1 : -1);
-    direction = isInner ? +1 : -1;
+    const changed = direction !== (isInner ? -1 : +1);
+    direction = isInner ? -1 : +1;
     innerBtn.classList.toggle("on", isInner);
     outerBtn.classList.toggle("on", !isInner);
     // Switching loops swaps to the other playlist's (preloaded) recording for
@@ -608,7 +608,7 @@
   build();
   measure();
   layout(false);
-  setLoop(true);
+  setLoop(false);
   setupMediaSession();
   syncAudio(false);   // arm the opening track + preload neighbours (no autoplay)
 

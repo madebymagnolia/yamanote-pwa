@@ -364,7 +364,7 @@ html[data-theme="light"] .station.active .badge .num {
 .toggle .divider {
   width: 1px;
   align-self: stretch;
-  margin: 8px 0 8px 3px;
+  margin: 8px 0 8px -4px;
   background: var(--dim);
   opacity: 0.5;
 }

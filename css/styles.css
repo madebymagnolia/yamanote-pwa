@@ -259,7 +259,7 @@ html[data-theme="light"] .station.active .badge .num {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
+  top: -4px;
   text-align: center;
   font-weight: 500;
   font-size: 36px;
@@ -684,7 +684,6 @@ body.booting .corner-ctrl {
 
 /* Section chip — floats above the track, centred on the active segment */
 .scrub-chip {
-  background: #14281A;
   position: absolute;
   bottom: calc(100% + 12px);
   transform: translateX(-50%);
@@ -700,6 +699,12 @@ body.booting .corner-ctrl {
   z-index: 3;
   transition: color var(--theme-dur, 0.45s) var(--ease),
               border-color var(--theme-dur, 0.45s) var(--ease);
+}
+
+html[data-theme="light"] .scrub-chip {
+  background: var(--green);
+  color: var(--bg);
+  border: none;
 }
 
 .scrub-track {
@@ -757,6 +762,7 @@ body.booting .corner-ctrl {
   left: 0;
   transition: background-color var(--theme-dur, 0.45s) var(--ease);
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .spine, .station, .station .name, .station .badge { transition-duration: 0.001s; }

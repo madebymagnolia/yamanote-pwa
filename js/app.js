@@ -13,16 +13,30 @@
   const N = S.length;                 // 30
   const DUR_MS = 620;                 // keep in sync with --dur
 
-  const BOX  = 96;                    // JY number box — ALWAYS 96×96, never scales
-  const GAP  = 16;                    // box ↔ name gap
-  const NAME = 36;                    // active name line height
-  const BLOCK = BOX + GAP + NAME;     // current block height = 148
+  const BOX         = 64;    // JY number box size
+  const GAP         = 16;    // box ↔ name gap
+  const NAME        = 36;    // active name line height
+  const SCRUB_BELOW = 44;    // space below name centre reserved for the scrub bar
+  const BLOCK = BOX + GAP + NAME + SCRUB_BELOW;   // total active-station block
 
   const ribbon   = document.getElementById("ribbon");
   const stage    = document.getElementById("stage");
   const playBtn  = document.getElementById("play");
   const innerBtn = document.getElementById("inner");
   const outerBtn = document.getElementById("outer");
+
+  // Per-station scrub containers (built inside each .station div by build()).
+  // scrubChip / scrubTrack / scrubHead / scrubSegments are transient refs
+  // that always point to the *active* station's scrub elements.
+  const itemScrubs    = [];
+  let   scrubChip      = null;
+  let   scrubTimeCur   = null;
+  let   scrubTimeTotal = null;
+  let   scrubTrack     = null;
+  let   scrubHead      = null;
+  let   scrubSegments  = [];
+  let   scrubBuiltFor  = null;   // "outer:0" — guard against redundant rebuilds
+  let   scrubRafId     = null;
 
   let currentIndex = 30;              // open on Tokyo (JY01 → array index 01)
   let direction = +1;                 // outer loop ascends; inner loop descends
@@ -33,6 +47,148 @@
   let nameCenter = 0, prevCenter = 0, nextCenter = 0;
   let upGap = 0, downGap = 0;
   let dotPeriod = 10, lineStep = 120;
+
+  /* ── scrub bar ──────────────────────────────────────────────────────────
+     Layout: [current-time] [track ≤204px] [total-time], centred per station.
+     The active section and all past sections are fully green; the thin
+     playhead line shows the exact position within the active section.
+     A chip label floats above the track, centred on the active segment.
+     ─────────────────────────────────────────────────────────────────────── */
+  function currentSections() {
+    const st = S[normIdx(currentIndex)];
+    return (st.sections && st.sections[loopKey()]) || null;
+  }
+
+  function fmtTime(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    s = Math.floor(s);
+    var m = Math.floor(s / 60);
+    return m + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+  }
+
+  function buildScrubBar() {
+    const key = loopKey() + ":" + normIdx(currentIndex);
+    if (scrubBuiltFor === key) return;
+    scrubBuiltFor = key;
+
+    const idx       = normIdx(currentIndex);
+    const container = itemScrubs[idx];
+    if (!container) return;
+
+    container.innerHTML = "";
+    scrubChip      = null;
+    scrubTimeCur   = null;
+    scrubTimeTotal = null;
+    scrubTrack     = null;
+    scrubHead      = null;
+    scrubSegments  = [];
+
+    const sections = currentSections();
+    if (!sections || sections.length === 0) return;
+
+    // Flex row: [current-time] [track] [total-time], centred in the station.
+    var row = document.createElement("div");
+    row.className = "scrub-row";
+    container.appendChild(row);
+
+    scrubTimeCur = document.createElement("span");
+    scrubTimeCur.className = "scrub-time scrub-time-cur";
+    scrubTimeCur.textContent = "0:00";
+    row.appendChild(scrubTimeCur);
+
+    scrubTrack = document.createElement("div");
+    scrubTrack.className = "scrub-track";
+    row.appendChild(scrubTrack);
+
+    // Chip label — absolutely positioned inside the track, floats above it.
+    scrubChip = document.createElement("div");
+    scrubChip.className = "scrub-chip";
+    scrubChip.textContent = sections[0].label;
+    scrubTrack.appendChild(scrubChip);
+
+    // Head lives inside the track; segments are inserted before it.
+    scrubHead = document.createElement("div");
+    scrubHead.className = "scrub-head";
+    scrubTrack.appendChild(scrubHead);
+
+    sections.forEach(function (sec, i) {
+      const segStart = i > 0 ? sections[i - 1].end : 0;
+      const segDur   = sec.end - segStart;
+      var seg  = document.createElement("div");
+      seg.className  = "scrub-segment";
+      if (i === 0)                   seg.classList.add("scrub-segment--first");
+      if (i === sections.length - 1) seg.classList.add("scrub-segment--last");
+      seg.style.flexGrow = segDur;
+      var fill = document.createElement("div");
+      fill.className = "scrub-fill";
+      seg.appendChild(fill);
+      scrubTrack.insertBefore(seg, scrubHead);
+      scrubSegments.push(seg);
+    });
+
+    scrubTimeTotal = document.createElement("span");
+    scrubTimeTotal.className = "scrub-time scrub-time-total";
+    scrubTimeTotal.textContent = "0:00";
+    row.appendChild(scrubTimeTotal);
+
+    updateScrubBar();
+  }
+
+  function updateScrubBar() {
+    if (!scrubHead || !scrubSegments.length || !scrubTrack) return;
+    const sections = currentSections();
+    if (!sections) return;
+
+    const t   = (current && isFinite(current.currentTime)) ? current.currentTime : 0;
+    const tot = (current && isFinite(current.duration))    ? current.duration
+                                                           : sections[sections.length - 1].end;
+
+    if (scrubTimeCur)   scrubTimeCur.textContent   = fmtTime(t);
+    if (scrubTimeTotal) scrubTimeTotal.textContent  = fmtTime(tot);
+
+    // Find which section is active.
+    var si = sections.length - 1;
+    for (var i = 0; i < sections.length; i++) {
+      if (t < sections[i].end) { si = i; break; }
+    }
+
+    const segStart = si > 0 ? sections[si - 1].end : 0;
+    const segEnd   = sections[si].end;
+    const dur      = segEnd - segStart;
+    const progress = dur > 0 ? Math.min(1, Math.max(0, (t - segStart) / dur)) : 0;
+
+    // Past and current sections are fully green; future sections are dim.
+    scrubSegments.forEach(function (seg, i) {
+      seg.querySelector(".scrub-fill").style.width = (i <= si) ? "100%" : "0%";
+    });
+
+    // Position head and update chip.
+    var trackRect = scrubTrack.getBoundingClientRect();
+    var segEl     = scrubSegments[si];
+    if (!segEl || !trackRect.width) return;
+    var segRect = segEl.getBoundingClientRect();
+
+    scrubHead.style.left = ((segRect.left - trackRect.left) + progress * segRect.width) + "px";
+
+    if (scrubChip) {
+      scrubChip.style.left = ((segRect.left - trackRect.left) + segRect.width / 2) + "px";
+      scrubChip.textContent = sections[si].label;
+    }
+  }
+
+  function startScrubRaf() {
+    if (scrubRafId) return;
+    function tick() {
+      updateScrubBar();
+      scrubRafId = playing ? requestAnimationFrame(tick) : null;
+    }
+    scrubRafId = requestAnimationFrame(tick);
+  }
+
+  function stopScrubRaf() {
+    if (scrubRafId) { cancelAnimationFrame(scrubRafId); scrubRafId = null; }
+    updateScrubBar();   // snapshot position at the moment of pause
+  }
 
   /* build the station elements (one copy — looping is modular) ------------- */
   const items = [];
@@ -63,11 +219,16 @@
       name.textContent = st.name;
       name.addEventListener("click", () => jumpTo(i));
 
+      const scrub = document.createElement("div");
+      scrub.className = "scrub";
+
       el.appendChild(eraser);
       el.appendChild(badge);
       el.appendChild(name);
+      el.appendChild(scrub);
       ribbon.appendChild(el);
-      items[i] = el;
+      items[i]      = el;
+      itemScrubs[i] = scrub;
     }
   }
 
@@ -91,7 +252,7 @@
     // (between the current name and the controls).
     const blockTop    = mid - BLOCK / 2;
     const blockBottom = mid + BLOCK / 2;
-    nameCenter = blockBottom - NAME / 2;            // current name = block bottom
+    nameCenter = blockBottom - NAME / 2 - SCRUB_BELOW;  // name sits above the scrub
     prevCenter = (T + blockTop) / 2;                // centred above the block
     nextCenter = (blockBottom + C) / 2;             // centred below the block
     upGap   = nameCenter - prevCenter;
@@ -264,10 +425,11 @@
     const el = elFor(currentIndex);
     if (current && current !== el) current.pause();
     current = el;
+    buildScrubBar();
     updateMediaSession();
     if (!el) return;
     if (restart) el.currentTime = 0;
-    if (playing) el.play().catch(() => {});
+    if (playing) { el.play().catch(() => {}); startScrubRaf(); }
     preloadNeighbors();
   }
 
@@ -336,6 +498,7 @@
       if (current && d && typeof d.seekTime === "number") {
         current.currentTime = d.seekTime;
         updatePositionState();
+        updateScrubBar();
       }
     });
   }
@@ -379,8 +542,13 @@
   function togglePlay() {
     playing = !playing;
     playBtn.classList.toggle("playing", playing);
-    if (playing) syncAudio(false);   // resume current track (or start it)
-    else if (current) current.pause();
+    if (playing) {
+      syncAudio(false);              // resume current track (or start it)
+      startScrubRaf();
+    } else {
+      if (current) current.pause();
+      stopScrubRaf();
+    }
     if (hasMediaSession) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
   }
 

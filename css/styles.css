@@ -2,7 +2,7 @@
    Yamanote Line — station melody player
    Visual system lifted from the Figma source:
      bg        rgb(25,25,23)      warm near-black
-     JR green  rgb(40,163,81)
+     JR green  rgb(50,205,102)
      control   linear-gradient(180deg, #474745, #353533)
      type      Space Grotesk (Medium / Bold)
    ─────────────────────────────────────────────────────────── */
@@ -15,7 +15,7 @@
   --fg:        #fff;                /* primary text / active icons     */
   --panel:     rgb(34, 34, 31);     /* elevated surface (info modal)   */
   --panel-edge: rgba(255, 255, 255, 0.07);
-  --green:     rgb(40, 163, 81);    /* JR green — constant in both modes */
+  --green:     rgb(50, 205, 102);   /* JR green — constant in both modes */
   --ctrl-top:  rgb(71, 71, 69);     /* button gradient — top stop      */
   --ctrl-bot:  rgb(53, 53, 51);     /* button gradient — bottom stop   */
   --ctrl-ring: rgba(255, 255, 255, 0.2);   /* inset top highlight      */
@@ -32,7 +32,7 @@
   /* corner padding for the desktop dark-mode / info buttons */
   --corner-pad: 36px;
 
-  --badge:     96px;    /* JY number box — ALWAYS 96×96, never scales   */
+  --badge:     64px;    /* JY number box size (overridden by JS)         */
   --dot:       10px;    /* dotted-line period (set by JS)               */
 
   /* shared "halo" that lets chrome occlude the dotted spine,
@@ -250,8 +250,8 @@ html[data-theme="light"] .station.active .badge .num {
   pointer-events: none;
 }
 .station.active .eraser {
-  top: calc(-50px - var(--badge));   /* clear box top + 16px gap */
-  height: calc(84px + var(--badge)); /* down to name + 16px gap  */
+  top: calc(-50px - var(--badge));     /* clear box top + 16px gap        */
+  height: calc(128px + var(--badge));  /* down past name to scrub bottom  */
 }
 
 /* the name sits exactly on the slot centre line */
@@ -290,7 +290,7 @@ html[data-theme="light"] .station.active .badge .num {
   width: var(--badge);
   height: var(--badge);
   margin-left: calc(var(--badge) / -2);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--green);
   opacity: 0;
   transform: scale(0.55);
@@ -305,8 +305,8 @@ html[data-theme="light"] .station.active .badge .num {
 
 .badge .inner {
   position: absolute;
-  inset: 8px;
-  border-radius: 4px;
+  inset: 5px;
+  border-radius: 3px;
   background: var(--bg);
   display: flex;
   flex-direction: column;
@@ -316,13 +316,13 @@ html[data-theme="light"] .station.active .badge .num {
   transition: background-color var(--theme-dur, 0.45s) var(--ease);
 }
 .badge .jy {
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.02em;
 }
 .badge .num {
-  font-size: 46px;
+  font-size: 31px;
   font-weight: 500;
   line-height: 0.86;
   letter-spacing: -0.02em;
@@ -638,6 +638,126 @@ body.booting .corner-ctrl {
 }
 .modal-contact a:hover { text-decoration: underline; }
 
+/* ── scrub bar ────────────────────────────────────────────────
+   Lives INSIDE each .station element, positioned below the name.
+   Layout: [current-time] [track (max 204px)] [total-time], centred.
+   A chip label floats above the active segment; the thin playhead
+   line shows exact position within the lit-up current section.
+   Fades in/out with .station.active, just like the JY badge. ──── */
+.station .scrub {
+  position: absolute;
+  top: 26px;    /* 18px name-half + 8px gap below name */
+  left: 0;
+  right: 0;
+  opacity: 0;
+  transition: opacity calc(var(--dur) * 0.85) var(--ease);
+  pointer-events: none;
+}
+
+.station.active .scrub {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Flex row — timestamps flank the track, whole row centred in the station */
+.scrub-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 30px;    /* vertical space reserved for the chip above the track */
+}
+
+.scrub-time {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 28px;
+  transition: color var(--theme-dur, 0.45s) var(--ease);
+}
+
+.scrub-time-cur   { text-align: right; }
+.scrub-time-total { text-align: left; }
+
+/* Section chip — floats above the track, centred on the active segment */
+.scrub-chip {
+  background: #14281A;
+  position: absolute;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  padding: 2px 8px 3px;
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--green);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+  transition: color var(--theme-dur, 0.45s) var(--ease),
+              border-color var(--theme-dur, 0.45s) var(--ease);
+}
+
+.scrub-track {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 4px;
+  flex: 1;
+  max-width: 204px;
+}
+
+.scrub-segment {
+  flex-basis: 0;
+  min-width: 0;
+  position: relative;
+  height: 4px;
+  background: var(--dim);
+  overflow: hidden;
+}
+
+.scrub-segment--first {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.scrub-segment--last {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.scrub-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  transition: background-color var(--theme-dur, 0.45s) var(--ease);
+}
+
+/* Transport head — a thin vertical line centred on the bar at the
+   current playback position. margin-left / margin-top centre it. */
+.scrub-head {
+  position: absolute;
+  width: 6px;
+  height: 12px;
+  margin-left: -1px;
+  margin-top: -4px;    /* (12 − 4) / 2 — centres head on the 4px bar */
+  border-radius: 1px;
+  border-left: 2px solid var(--bg);
+  border-right: 2px solid var(--bg);
+  background: var(--fg);
+  pointer-events: none;
+  z-index: 2;
+  left: 0;
+  transition: background-color var(--theme-dur, 0.45s) var(--ease);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spine, .station, .station .name, .station .badge { transition-duration: 0.001s; }
   .ribbon, .toggle, .controls { transition-duration: 0.001s; }
@@ -646,4 +766,5 @@ body.booting .corner-ctrl {
   body.booting .corner-ctrl { transform: none; }
   .corner-ctrl.intro        { transition-duration: 0.001s !important; }
   .modal-backdrop, .modal-card { transition-duration: 0.001s; }
+  .station .scrub { transition-duration: 0.001s; }
 }

@@ -79,15 +79,15 @@ window.YAMANOTE_STATIONS = [
   { jy: "11", name: "Sugamo",           kanji: "巣鴨",   artwork: "artwork/JY11.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY11-Sugamo-Inner.opus",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY11-Sugamo-Outer.opus" },
     sections: {
-      outer: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ],
-      inner: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ]
+      outer: [ { label: "Melody", end: 11.7 }, { label: "Door Chime", end: 15.2 }, { label: "Ambience", end: 27.1 }, { label: "Announcement", end: 49 }, { label: "Ambience", end: 56.2 }, { label: "Door Chime", end: 62.7 } ],
+      inner: [ { label: "Melody", end: 11 }, { label: "Door Chime", end: 14.5 }, { label: "Ambience", end: 23 }, { label: "Announcement", end: 68 }, { label: "Ambience", end: 72 }, { label: "Door Chime", end: 82 } ]
     }
   },
   { jy: "12", name: "Ōtsuka",           kanji: "大塚",   artwork: "artwork/JY12.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY12-Otsuka-Inner.opus",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY12-Otsuka-Outer.opus" },
     sections: {
-      outer: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ],
-      inner: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ]
+      outer: [ { label: "Melody", end: 11.9 }, { label: "Door Chime", end: 15.6 }, { label: "Ambience", end: 26.5 }, { label: "Announcement", end: 70.3 }, { label: "Ambience", end: 74 }, { label: "Door Chime", end: 80.9 } ],
+      inner: [ { label: "Melody", end: 11.4 }, { label: "Door Chime", end: 14.9 }, { label: "Ambience", end: 25 }, { label: "Announcement", end: 46.2 }, { label: "Ambience", end: 55.5 }, { label: "Door Chime", end: 64.3 } ]
     }
   },
   { jy: "13", name: "Ikebukuro",        kanji: "池袋",   artwork: "artwork/JY13.png",

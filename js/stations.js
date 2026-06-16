@@ -58,22 +58,22 @@ window.YAMANOTE_STATIONS = [
   { jy: "08", name: "Nishi-Nippori",    kanji: "西日暮里", artwork: "artwork/JY08.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY08-Nishi-Nippori-Inner.opus",    outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY08-Nishi-Nippori-Outer.opus" },
     sections: {
-      outer: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ],
-      inner: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ]
+      outer: [ { label: "Melody", end: 9.8 }, { label: "Door Chime", end: 13.3 }, { label: "Ambience", end: 22.3 }, { label: "Announcement", end: 44 }, { label: "Ambience", end: 50 }, { label: "Door Chime", end: 55.9 } ],
+      inner: [ { label: "Melody", end: 7.9 }, { label: "Door Chime", end: 11.4 }, { label: "Ambience", end: 18.4 }, { label: "Announcement", end: 45.6 }, { label: "Ambience", end: 52 }, { label: "Door Chime", end: 62 } ]
     }
   },
   { jy: "09", name: "Tabata",           kanji: "田端",   artwork: "artwork/JY09.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY09-Tabata-Inner.opus",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY09-Tabata-Outer.opus" },
     sections: {
-      outer: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ],
-      inner: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ]
+      outer: [ { label: "Melody", end: 11.7 }, { label: "Door Chime", end: 15.7 }, { label: "Ambience", end: 26 }, { label: "Announcement", end: 71.6 }, { label: "Ambience", end: 76.4 }, { label: "Door Chime", end: 82.7 } ],
+      inner: [ { label: "Melody", end: 7.9 }, { label: "Door Chime", end: 11.4 }, { label: "Ambience", end: 20.7 }, { label: "Announcement", end: 46.4 }, { label: "Ambience", end: 52 }, { label: "Door Chime", end: 59.1 } ]
     }
   },
   { jy: "10", name: "Komagome",         kanji: "駒込",   artwork: "artwork/JY10.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY10-Komagome-Inner.opus",         outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY10-Komagome-Outer.opus" },
     sections: {
-      outer: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ],
-      inner: [ { label: "Melody", end: 0 }, { label: "Door Chime", end: 0 }, { label: "Ambience", end: 0 }, { label: "Announcement", end: 0 }, { label: "Ambience", end: 0 }, { label: "Door Chime", end: 0 } ]
+      outer: [ { label: "Melody", end: 17.6 }, { label: "Door Chime", end: 21.1 }, { label: "Ambience", end: 34.2 }, { label: "Announcement", end: 55 }, { label: "Ambience", end: 62 }, { label: "Door Chime", end: 69 } ],
+      inner: [ { label: "Melody", end: 17.6 }, { label: "Door Chime", end: 21.3 }, { label: "Ambience", end: 30.6 }, { label: "Announcement", end: 52 }, { label: "Ambience", end: 62.3 }, { label: "Door Chime", end: 71.3 } ]
     }
   },
   { jy: "11", name: "Sugamo",           kanji: "巣鴨",   artwork: "artwork/JY11.png",

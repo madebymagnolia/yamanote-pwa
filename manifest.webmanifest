@@ -1,6 +1,6 @@
 {
-  "name": "Yamanote.fun",
-  "short_name": "Yamanote.fun",
+  "name": "Yamanote",
+  "short_name": "Yamanote",
   "description": "Listen to the station departure melodies of every Yamanote Line station, like a playlist.",
   "start_url": "index.html",
   "scope": "./",

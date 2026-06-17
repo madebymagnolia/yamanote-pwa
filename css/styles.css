@@ -414,6 +414,11 @@ html[data-theme="light"] .station.active .badge .num {
   box-shadow: var(--halo), inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
   transition: transform 0.18s var(--ease);
 }
+
+html[data-theme="light"] .ctrl.play {
+  box-shadow: none;
+}
+
 /* pressed feedback: shrink slightly and darken — consistent in both themes. */
 .ctrl:active   { transform: scale(0.9); }
 /* .ctrl.skip:active { filter: brightness(0.85); } */
@@ -684,27 +689,21 @@ body.booting .corner-ctrl {
 
 /* Section chip — floats above the track, centred on the active segment */
 .scrub-chip {
+  background-color: var(--green);
   position: absolute;
   bottom: calc(100% + 12px);
   transform: translateX(-50%);
   padding: 2px 8px 3px;
-  border: 1px solid var(--green);
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.04em;
-  color: var(--green);
+  color: var(--bg);
   white-space: nowrap;
   pointer-events: none;
   z-index: 3;
   transition: color var(--theme-dur, 0.45s) var(--ease),
               border-color var(--theme-dur, 0.45s) var(--ease);
-}
-
-html[data-theme="light"] .scrub-chip {
-  background: var(--green);
-  color: var(--bg);
-  border: none;
 }
 
 .scrub-track {

@@ -344,7 +344,7 @@
 
   function jumpTo(i) {
     step(offsetOf(i));
-    syncAudio(true);
+    syncAudioDeferred(true);
   }
 
   /* ───────────────────────────────────────────────────────────────────────
@@ -473,6 +473,22 @@
     preloadNeighbors();
   }
 
+  // Navigation (swipe / tap / next-prev) calls step() then syncAudio() back
+  // to back. step() just sets a CSS transform — cheap — but syncAudio()'s
+  // src swap + load() + play() can be genuinely slow on iOS, and running it
+  // in the same task as the transform change risks delaying the browser's
+  // very first animated frame, which is what reads as a stutter/pause right
+  // at the start of the slide. The double rAF guarantees at least one frame
+  // has already been painted (and handed to the compositor) with the new
+  // transform before this runs, so a slow load()/play() can't block the
+  // animation's start — audio simply starts playing a beat later, whenever
+  // it's ready, instead of gating the slide.
+  function syncAudioDeferred(restart) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => syncAudio(restart));
+    });
+  }
+
   /* ───────────────────────────────────────────────────────────────────────
      Media Session — surface the current track on the iOS lock screen /
      Control Center (and Android / desktop) so the hardware + lock-screen
@@ -546,7 +562,7 @@
   // Move the ribbon by `delta` stations, then resync audio from the start.
   function gotoTrack(delta) {
     step(delta);
-    syncAudio(true);
+    syncAudioDeferred(true);
   }
 
   function transportNext() {
@@ -725,7 +741,7 @@
   function commitStep(dir) {
     ribbon.classList.remove("dragging");    // re-arm the transform transition
     ribbon.style.transform = "translateY(0)";   // hand off into the step anim
-    step(dir); syncAudio(true);
+    step(dir); syncAudioDeferred(true);
   }
 
   stage.addEventListener("touchstart", (e) => {
@@ -765,7 +781,7 @@
     ribbon.classList.remove("dragging");    // re-arm the transform transition
     ribbon.style.transform = "translateY(0)";   // spring back / hand off
     // Lifted before the threshold: a quick flick still commits.
-    if (Math.abs(vel) > COMMIT_V) { step(dy < 0 ? +1 : -1); syncAudio(true); }
+    if (Math.abs(vel) > COMMIT_V) { step(dy < 0 ? +1 : -1); syncAudioDeferred(true); }
   }
 
   stage.addEventListener("touchend", (e) => endDrag(e.changedTouches[0].clientY), { passive: true });

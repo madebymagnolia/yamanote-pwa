@@ -487,6 +487,14 @@
   // via a double rAF to dodge an unrelated layout-thrashing bug in
   // buildScrubBar() — that bug is now fixed at its actual source, so the
   // defer was both unnecessary and broke Safari. Don't reintroduce it.)
+  // Run fn after the browser has painted the current frame. The first rAF
+  // fires just before the next paint; the second fires on the following frame,
+  // by which point that paint has landed. Lets us keep non-urgent work off the
+  // critical path of an animation that is starting in this same task.
+  function afterPaint(fn) {
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  }
+
   function syncAudio(restart) {
     const src = srcFor(currentIndex);
     const key = cacheKey(currentIndex);
@@ -497,7 +505,7 @@
       audioEl.pause();
       current = null;
       currentKey = null;
-      updateMediaSession();
+      afterPaint(updateMediaSession);
       return;
     }
 
@@ -509,9 +517,17 @@
     if (restart) audioEl.currentTime = 0;
 
     current = audioEl;
-    updateMediaSession();
+    // Start playback synchronously — Safari only honours play() inside the
+    // user-gesture task (see the note above this function). Everything else
+    // is deferred past the first painted frame: navigation calls step() (which
+    // arms the slide's CSS transform) and then syncAudio() back to back, so any
+    // heavy work here runs before the browser can paint the slide's first frame
+    // and shows up as a stutter. updateMediaSession() makes Chrome fetch/decode
+    // the 512px station artwork and preloadNeighbors() kicks off three network
+    // fetches — neither needs user activation, and a ~2-frame delay on
+    // lock-screen metadata / prefetch is imperceptible.
     if (playing) { playCurrent(); startScrubRaf(); }
-    preloadNeighbors();
+    afterPaint(() => { updateMediaSession(); preloadNeighbors(); });
   }
 
   /* ───────────────────────────────────────────────────────────────────────

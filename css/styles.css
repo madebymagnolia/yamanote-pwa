@@ -664,20 +664,25 @@ body.booting .corner-ctrl {
    Layout: [current-time] [track (max 204px)] [total-time], centred.
    A chip label floats above the active segment; the thin playhead
    line shows exact position within the lit-up current section.
-   Fades in/out with .station.active, just like the JY badge. ──── */
+   Fades in/out with .station.active, just like the JY badge — but
+   asymmetrically: hiding is quick and clean (the eye has already moved
+   on to the incoming station), while showing eases in over the same
+   duration as the slide so it arrives in step rather than snapping in
+   ahead of it. ──── */
 .station .scrub {
   position: absolute;
   top: 26px;    /* 18px name-half + 8px gap below name */
   left: 0;
   right: 0;
   opacity: 0;
-  transition: opacity calc(var(--dur) * 0.85) var(--ease);
+  transition: opacity 0.15s var(--ease);
   pointer-events: none;
 }
 
 .station.active .scrub {
   opacity: 1;
   pointer-events: auto;
+  transition: opacity calc(var(--dur) * 0.85) var(--ease);
 }
 
 /* Flex row — timestamps flank the track, whole row centred in the station */

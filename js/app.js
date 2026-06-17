@@ -323,6 +323,14 @@
     if (delta === 0) return;
     currentIndex = ((currentIndex + delta) % N + N) % N;
     layout(true);
+    // Build the new station's scrub bar (chip + segments) right now, in the
+    // same tick as the .active class flip — not inside the deferred
+    // syncAudio(). Otherwise the bar's content only appears ~2 frames after
+    // its fade-in already started, which reads as a late "pop" right in the
+    // middle of the slide. This is pure DOM work (no audio engine calls), so
+    // it's cheap and safe to do immediately. syncAudio() still calls it too,
+    // harmlessly — the scrubBuiltFor guard skips the redundant rebuild.
+    buildScrubBar();
 
     // scroll the dotted line so the dots visibly travel with the names. The
     // offset accumulates across rapid presses; lineStep is a whole number of
@@ -388,7 +396,11 @@
   audioEl.preload = "auto";
   audioEl.addEventListener("ended", () => transportNext());
   audioEl.addEventListener("timeupdate",     updatePositionState);
-  audioEl.addEventListener("loadedmetadata", updatePositionState);
+  // Until the new src's metadata loads, the scrub bar's total-duration
+  // timestamp briefly reads the previous track's duration (buildScrubBar()
+  // now runs immediately in step(), ahead of the deferred src swap). This
+  // self-corrects the instant the real duration is known, paused or not.
+  audioEl.addEventListener("loadedmetadata", () => { updatePositionState(); updateScrubBar(); });
 
   let current    = null;   // audioEl once a track is armed for this station, else null
   let currentKey = null;   // cacheKey of whatever src audioEl currently holds

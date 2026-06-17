@@ -361,7 +361,7 @@
 
   function jumpTo(i) {
     step(offsetOf(i));
-    syncAudioDeferred(true);
+    syncAudio(true);
   }
 
   /* ───────────────────────────────────────────────────────────────────────
@@ -464,8 +464,18 @@
 
   // Make the current station's track the audible one. `restart` rewinds it to
   // the top. Plays only when the user intends playback, so a paused deck just
-  // arms the track silently. Only touches src/load() when the station (or
-  // loop) actually changed, so resuming after a pause never re-fetches.
+  // arms the track silently. Only touches src when the station (or loop)
+  // actually changed, so resuming after a pause never re-fetches.
+  //
+  // IMPORTANT: always call this synchronously, in the same tick as the user
+  // gesture (click/touch) that triggered navigation — never deferred via
+  // setTimeout/requestAnimationFrame. Safari only treats a play() call as
+  // gesture-authorized if it's still within that synchronous call stack;
+  // once it's pushed to a later task or animation frame, Safari silently
+  // rejects it and the track never starts. (A previous version deferred this
+  // via a double rAF to dodge an unrelated layout-thrashing bug in
+  // buildScrubBar() — that bug is now fixed at its actual source, so the
+  // defer was both unnecessary and broke Safari. Don't reintroduce it.)
   function syncAudio(restart) {
     const src = srcFor(currentIndex);
     const key = cacheKey(currentIndex);
@@ -482,8 +492,7 @@
 
     if (key !== currentKey) {
       audioEl.pause();
-      audioEl.src = src;
-      audioEl.load();
+      audioEl.src = src;   // assigning .src already triggers the load algorithm
       currentKey = key;
     }
     if (restart) audioEl.currentTime = 0;
@@ -492,22 +501,6 @@
     updateMediaSession();
     if (playing) { playCurrent(); startScrubRaf(); }
     preloadNeighbors();
-  }
-
-  // Navigation (swipe / tap / next-prev) calls step() then syncAudio() back
-  // to back. step() just sets a CSS transform — cheap — but syncAudio()'s
-  // src swap + load() + play() can be genuinely slow on iOS, and running it
-  // in the same task as the transform change risks delaying the browser's
-  // very first animated frame, which is what reads as a stutter/pause right
-  // at the start of the slide. The double rAF guarantees at least one frame
-  // has already been painted (and handed to the compositor) with the new
-  // transform before this runs, so a slow load()/play() can't block the
-  // animation's start — audio simply starts playing a beat later, whenever
-  // it's ready, instead of gating the slide.
-  function syncAudioDeferred(restart) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => syncAudio(restart));
-    });
   }
 
   /* ───────────────────────────────────────────────────────────────────────
@@ -583,7 +576,7 @@
   // Move the ribbon by `delta` stations, then resync audio from the start.
   function gotoTrack(delta) {
     step(delta);
-    syncAudioDeferred(true);
+    syncAudio(true);
   }
 
   function transportNext() {
@@ -762,7 +755,7 @@
   function commitStep(dir) {
     ribbon.classList.remove("dragging");    // re-arm the transform transition
     ribbon.style.transform = "translateY(0)";   // hand off into the step anim
-    step(dir); syncAudioDeferred(true);
+    step(dir); syncAudio(true);
   }
 
   stage.addEventListener("touchstart", (e) => {
@@ -802,7 +795,7 @@
     ribbon.classList.remove("dragging");    // re-arm the transform transition
     ribbon.style.transform = "translateY(0)";   // spring back / hand off
     // Lifted before the threshold: a quick flick still commits.
-    if (Math.abs(vel) > COMMIT_V) { step(dy < 0 ? +1 : -1); syncAudioDeferred(true); }
+    if (Math.abs(vel) > COMMIT_V) { step(dy < 0 ? +1 : -1); syncAudio(true); }
   }
 
   stage.addEventListener("touchend", (e) => endDrag(e.changedTouches[0].clientY), { passive: true });

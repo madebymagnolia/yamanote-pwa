@@ -392,6 +392,17 @@
   const AUDIO_EXT =
     new Audio().canPlayType('audio/ogg; codecs="opus"') ? ".opus" : ".m4a";
 
+  // Does this engine require <audio>.play() to be called synchronously inside
+  // the user-gesture handler? Safari/WebKit (desktop + every iOS browser, which
+  // are all WebKit under the hood) do — defer it and playback silently fails.
+  // Chrome/Firefox grant "sticky" activation after any click, so they allow a
+  // play() a few frames later. syncAudio() uses this to keep the ribbon slide
+  // smooth on the lenient engines (see there).
+  const isWebKit =
+    /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (/Safari/.test(navigator.userAgent) &&
+      !/Chrome|Chromium|Android|Edg|OPR/.test(navigator.userAgent));
+
   const srcFor  = (i) => {
     const a = S[normIdx(i)].audio;
     const base = a && a[loopKey()];
@@ -495,17 +506,20 @@
     requestAnimationFrame(() => requestAnimationFrame(fn));
   }
 
-  function syncAudio(restart) {
+  // Switch the shared <audio> to the current station's track and, if the deck
+  // is playing, start it. This is the expensive part: on Chrome, pausing and
+  // reassigning .src on a live element does enough synchronous work to delay
+  // the next paint — so it must NOT run in the same task as step()'s transform
+  // change. syncAudio() decides whether to call this now or after the paint.
+  function applyAudio(restart) {
     const src = srcFor(currentIndex);
     const key = cacheKey(currentIndex);
-
-    buildScrubBar();
 
     if (!src) {
       audioEl.pause();
       current = null;
       currentKey = null;
-      afterPaint(updateMediaSession);
+      updateMediaSession();
       return;
     }
 
@@ -517,17 +531,28 @@
     if (restart) audioEl.currentTime = 0;
 
     current = audioEl;
-    // Start playback synchronously — Safari only honours play() inside the
-    // user-gesture task (see the note above this function). Everything else
-    // is deferred past the first painted frame: navigation calls step() (which
-    // arms the slide's CSS transform) and then syncAudio() back to back, so any
-    // heavy work here runs before the browser can paint the slide's first frame
-    // and shows up as a stutter. updateMediaSession() makes Chrome fetch/decode
-    // the 512px station artwork and preloadNeighbors() kicks off three network
-    // fetches — neither needs user activation, and a ~2-frame delay on
-    // lock-screen metadata / prefetch is imperceptible.
     if (playing) { playCurrent(); startScrubRaf(); }
-    afterPaint(() => { updateMediaSession(); preloadNeighbors(); });
+    updateMediaSession();
+    preloadNeighbors();
+  }
+
+  function syncAudio(restart) {
+    // The scrub bar is visual — build it immediately so it tracks the station
+    // in lock-step with the slide. (Navigation also builds it in step(); this
+    // covers the loop-toggle / play / boot callers.) Guarded, so it's cheap.
+    buildScrubBar();
+
+    // Navigation runs step() — which arms the ribbon's CSS slide — then
+    // syncAudio() in the SAME task, and the browser can't paint the slide's
+    // first frame until that task ends. applyAudio() is heavy enough on Chrome
+    // to delay that frame, so the slide visibly waits for the track to swap and
+    // then animates. Chrome/Firefox keep sticky activation after a click, so we
+    // push the whole switch past the first paint and let the ribbon animate
+    // unblocked. Safari/WebKit only honour play() inside the synchronous gesture
+    // (deferring it is what broke playback before) and animate smoothly anyway,
+    // so there we run it synchronously.
+    if (isWebKit) applyAudio(restart);
+    else afterPaint(() => applyAudio(restart));
   }
 
   /* ───────────────────────────────────────────────────────────────────────

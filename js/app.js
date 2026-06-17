@@ -382,9 +382,20 @@
   // active playlist follows the current loop direction, so the same station
   // plays a different recording on the inner vs. outer loop.
   const loopKey = () => (direction === +1 ? "outer" : "inner");
+
+  // Pick the audio container this browser can actually decode, once, at start.
+  // Opus-in-Ogg is smaller and plays fine in Chrome/Firefox, but Safari (both
+  // desktop and iOS) has NEVER supported the Ogg container — it needs AAC in an
+  // MP4 wrapper (.m4a). Both encodings live in R2 under the same base name, so
+  // stations.js stores the extension-less URL and we append the right one here.
+  // canPlayType() returns "probably"/"maybe" (truthy) when supported, "" if not.
+  const AUDIO_EXT =
+    new Audio().canPlayType('audio/ogg; codecs="opus"') ? ".opus" : ".m4a";
+
   const srcFor  = (i) => {
     const a = S[normIdx(i)].audio;
-    return (a && a[loopKey()]) || null;
+    const base = a && a[loopKey()];
+    return base ? base + AUDIO_EXT : null;
   };
   const cacheKey = (i) => loopKey() + ":" + normIdx(i);
 

@@ -134,18 +134,26 @@
     scrubTimeTotal.textContent = "0:00";
     row.appendChild(scrubTimeTotal);
 
-    // updateScrubBar() reads getBoundingClientRect() to place the head/chip,
-    // which forces the browser to synchronously flush layout. buildScrubBar()
-    // now runs immediately inside step(), in the same tick as the transform
-    // change that kicks off the slide — calling that measurement here would
-    // force the flush right then, delaying the very first animated frame
-    // (felt as a pause before the slide starts). Deferring by one frame lets
-    // the transform change go through the normal rendering pipeline first;
-    // the structural content above (chip text, segments, timestamps) is
-    // already in place either way.
-    requestAnimationFrame(updateScrubBar);
+    // Position the head/chip now. updateScrubBar() is measurement-free (it
+    // computes positions with calc(), never reading layout — see there), so
+    // this is just style writes: no forced reflow, and the chip starts in the
+    // right place instead of flashing at the track's left edge for a frame.
+    updateScrubBar();
   }
 
+  // Keep in sync with the `gap` on .scrub-track in styles.css.
+  const SCRUB_GAP = 4;
+
+  // Lay out the head and chip with pure arithmetic + calc(), never
+  // getBoundingClientRect(). Reading layout here used to force a synchronous
+  // reflow of the whole scaled ribbon — once per navigation while paused (which
+  // hitched the slide) and once PER FRAME while playing. The track is a flex
+  // row whose segments have flex-grow = their duration, so each segment's width
+  // is exactly proportional to its duration: a point at time `tv` sits at
+  // fraction tv/sumDur of the segment area (track width minus the fixed
+  // inter-segment gaps), plus the whole gaps that precede it. Emitting that as a
+  // calc() lets the browser resolve the pixels at its normal layout time, so a
+  // style write here never forces a reflow from JS.
   function updateScrubBar() {
     if (!scrubHead || !scrubSegments.length || !scrubTrack) return;
     const sections = currentSections();
@@ -156,7 +164,7 @@
                                                            : sections[sections.length - 1].end;
 
     if (scrubTimeCur)   scrubTimeCur.textContent   = fmtTime(t);
-    if (scrubTimeTotal) scrubTimeTotal.textContent  = fmtTime(tot);
+    if (scrubTimeTotal) scrubTimeTotal.textContent = fmtTime(tot);
 
     // Find which section is active.
     var si = sections.length - 1;
@@ -166,24 +174,28 @@
 
     const segStart = si > 0 ? sections[si - 1].end : 0;
     const segEnd   = sections[si].end;
-    const dur      = segEnd - segStart;
-    const progress = dur > 0 ? Math.min(1, Math.max(0, (t - segStart) / dur)) : 0;
+    const segDur   = segEnd - segStart;
+    const progress = segDur > 0 ? Math.min(1, Math.max(0, (t - segStart) / segDur)) : 0;
 
-    // Only the active section is green; past and future sections are dim.
+    // Only the active section is lit; past and future stay dim.
     scrubSegments.forEach(function (seg, i) {
       seg.querySelector(".scrub-fill").style.width = (i === si) ? "100%" : "0%";
     });
 
-    // Position head and update chip.
-    var trackRect = scrubTrack.getBoundingClientRect();
-    var segEl     = scrubSegments[si];
-    if (!segEl || !trackRect.width) return;
-    var segRect = segEl.getBoundingClientRect();
+    const sumDur   = sections[sections.length - 1].end || 1;
+    const gapsPx   = si * SCRUB_GAP;                         // whole gaps before segment si
+    const totalGap = (sections.length - 1) * SCRUB_GAP;      // all inter-segment gaps
 
-    scrubHead.style.left = ((segRect.left - trackRect.left) + progress * segRect.width) + "px";
+    // CSS `left` within the track for a given time, gap-aware, no measuring.
+    const posCalc = function (tv) {
+      var frac = Math.min(1, Math.max(0, tv / sumDur));
+      return "calc(" + frac + " * (100% - " + totalGap + "px) + " + gapsPx + "px)";
+    };
+
+    scrubHead.style.left = posCalc(segStart + progress * segDur);
 
     if (scrubChip) {
-      scrubChip.style.left = ((segRect.left - trackRect.left) + segRect.width / 2) + "px";
+      scrubChip.style.left = posCalc((segStart + segEnd) / 2);
       scrubChip.textContent = sections[si].label;
     }
   }

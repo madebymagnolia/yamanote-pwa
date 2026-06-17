@@ -433,6 +433,25 @@
     return null;
   }
 
+  // iOS silently reclaims the decode buffers of a preloaded-but-idle <audio>
+  // element while a different element plays — easy to hit here, since the
+  // pool grows for the whole session and is never evicted. The longer the
+  // outgoing track has been playing, the more likely the next/prev neighbour
+  // has gone stale by the time you swipe to it, so its play() rejects (or
+  // silently no-ops) with nothing to show for it. Reloading re-primes the
+  // decoder; retrying once (at the same position) recovers playback.
+  function playCurrent() {
+    const el = current;
+    if (!el) return;
+    el.play().catch(() => {
+      if (el !== current) return;   // superseded by another station meanwhile
+      const t = el.currentTime;
+      el.load();
+      el.currentTime = t;
+      el.play().catch(() => {});
+    });
+  }
+
   // Make the current station's track the audible one. `restart` rewinds it to
   // the top. Plays only when the user intends playback, so a paused deck just
   // arms the track silently. Pauses whatever was playing before.
@@ -444,7 +463,7 @@
     updateMediaSession();
     if (!el) return;
     if (restart) el.currentTime = 0;
-    if (playing) { el.play().catch(() => {}); startScrubRaf(); }
+    if (playing) { playCurrent(); startScrubRaf(); }
     preloadNeighbors();
   }
 
@@ -533,7 +552,7 @@
     // Past the restart threshold, "previous" rewinds the current track.
     if (current && srcFor(currentIndex) && current.currentTime > PREV_RESTART_S) {
       current.currentTime = 0;
-      if (playing) current.play().catch(() => {});
+      if (playing) playCurrent();
       return;
     }
     const r = scanAudio(-direction);

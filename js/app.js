@@ -371,34 +371,38 @@
   };
   const cacheKey = (i) => loopKey() + ":" + normIdx(i);
 
-  // ── preloading pool ────────────────────────────────────────────────────
-  // One <audio> element per (loop, station) track, kept warm so transitions
-  // are gapless: the moment a track ends or the user hits next/prev, the
-  // neighbour is already fully buffered and decoded, so .play() starts it with
-  // no load/seek hitch. We hold the current track plus its next/prev neighbours
-  // (in loop order) and the same station's track on the *other* loop, so loop
-  // toggles are seamless too. `current` is the element that's actually audible.
-  const pool = new Map();        // cacheKey → HTMLAudioElement
-  let current = null;
+  // ── single shared audio element ────────────────────────────────────────
+  // This used to keep a pool of several pre-loaded <audio> elements (one per
+  // nearby station) so the next track was always instantly ready to go.
+  // On iOS Safari that's fragile in a way that doesn't show up consistently:
+  // WebKit caps how many media elements it keeps decode-ready, and handing
+  // "audible" status from one element to another forces it to tear down and
+  // reassign the underlying audio session — a known source of intermittent
+  // silent-playback failures that has nothing to do with elapsed time, which
+  // is why the symptom felt random rather than threshold-based.
+  // A single shared element removes that whole class of bug: there is only
+  // ever one <audio>, one decoder, one audio session for the app's life.
+  // Changing track is just src + load() + play() on that same element, the
+  // same handoff a normal "single now-playing track" page would do.
+  const audioEl = new Audio();
+  audioEl.preload = "auto";
+  audioEl.addEventListener("ended", () => transportNext());
+  audioEl.addEventListener("timeupdate",     updatePositionState);
+  audioEl.addEventListener("loadedmetadata", updatePositionState);
 
-  function elFor(i) {
-    const src = srcFor(i);
-    if (!src) return null;
-    const key = cacheKey(i);
-    let el = pool.get(key);
-    if (!el) {
-      el = new Audio();
-      el.preload = "auto";
-      el.src = src;
-      // Only the audible element should auto-advance the playlist.
-      el.addEventListener("ended", () => { if (el === current) transportNext(); });
-      // Keep the lock-screen scrubber in step with the audible track.
-      el.addEventListener("timeupdate",     () => { if (el === current) updatePositionState(); });
-      el.addEventListener("loadedmetadata", () => { if (el === current) updatePositionState(); });
-      el.load();
-      pool.set(key, el);
-    }
-    return el;
+  let current    = null;   // audioEl once a track is armed for this station, else null
+  let currentKey = null;   // cacheKey of whatever src audioEl currently holds
+
+  // Network-only warm-up for the likely-next tracks. No second <audio>
+  // element is created — that was the source of the decode contention — so
+  // this just gets the bytes into the HTTP cache ahead of time, making the
+  // eventual src swap on syncAudio() start fast without competing for a
+  // decoder slot.
+  const prefetched = new Set();
+  function prefetch(src) {
+    if (!src || prefetched.has(src)) return;
+    prefetched.add(src);
+    fetch(src, { mode: "no-cors" }).catch(() => {});
   }
 
   // Warm the tracks the user is most likely to reach next: the next and prev
@@ -406,21 +410,11 @@
   function preloadNeighbors() {
     const nx = scanAudio(direction);
     const pv = scanAudio(-direction);
-    if (nx) elFor(currentIndex + direction * nx.dist);
-    if (pv) elFor(currentIndex - direction * pv.dist);
+    if (nx) prefetch(srcFor(currentIndex + direction * nx.dist));
+    if (pv) prefetch(srcFor(currentIndex - direction * pv.dist));
     const other = (direction === +1 ? "inner" : "outer");
     const a = S[normIdx(currentIndex)].audio;
-    if (a && a[other]) {
-      const k = other + ":" + normIdx(currentIndex);
-      if (!pool.has(k)) {
-        const el = new Audio();
-        el.preload = "auto";
-        el.src = a[other];
-        el.addEventListener("ended", () => { if (el === current) transportNext(); });
-        el.load();
-        pool.set(k, el);
-      }
-    }
+    if (a && a[other]) prefetch(a[other]);
   }
 
   // Scan from the current station in `dir` for the nearest station that has a
@@ -433,36 +427,48 @@
     return null;
   }
 
-  // iOS silently reclaims the decode buffers of a preloaded-but-idle <audio>
-  // element while a different element plays — easy to hit here, since the
-  // pool grows for the whole session and is never evicted. The longer the
-  // outgoing track has been playing, the more likely the next/prev neighbour
-  // has gone stale by the time you swipe to it, so its play() rejects (or
-  // silently no-ops) with nothing to show for it. Reloading re-primes the
-  // decoder; retrying once (at the same position) recovers playback.
+  // iOS can still reject (or silently no-op) a play() call right after a
+  // load()/src change, especially mid-gesture. Retry once, reloading first,
+  // so a transient failure self-heals instead of leaving the track silent.
   function playCurrent() {
-    const el = current;
-    if (!el) return;
-    el.play().catch(() => {
-      if (el !== current) return;   // superseded by another station meanwhile
-      const t = el.currentTime;
-      el.load();
-      el.currentTime = t;
-      el.play().catch(() => {});
+    if (!current) return;
+    current.play().catch(() => {
+      if (!current) return;
+      const t = current.currentTime;
+      current.load();
+      current.currentTime = t;
+      current.play().catch(() => {});
     });
   }
 
   // Make the current station's track the audible one. `restart` rewinds it to
   // the top. Plays only when the user intends playback, so a paused deck just
-  // arms the track silently. Pauses whatever was playing before.
+  // arms the track silently. Only touches src/load() when the station (or
+  // loop) actually changed, so resuming after a pause never re-fetches.
   function syncAudio(restart) {
-    const el = elFor(currentIndex);
-    if (current && current !== el) current.pause();
-    current = el;
+    const src = srcFor(currentIndex);
+    const key = cacheKey(currentIndex);
+
     buildScrubBar();
+
+    if (!src) {
+      audioEl.pause();
+      current = null;
+      currentKey = null;
+      updateMediaSession();
+      return;
+    }
+
+    if (key !== currentKey) {
+      audioEl.pause();
+      audioEl.src = src;
+      audioEl.load();
+      currentKey = key;
+    }
+    if (restart) audioEl.currentTime = 0;
+
+    current = audioEl;
     updateMediaSession();
-    if (!el) return;
-    if (restart) el.currentTime = 0;
     if (playing) { playCurrent(); startScrubRaf(); }
     preloadNeighbors();
   }

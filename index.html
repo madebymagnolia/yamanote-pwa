@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/styles.css?v=34" />
+<link rel="stylesheet" href="css/styles.css?v=36" />
 <script>
   /* Flag the installed/fullscreen PWA so the stylesheet can give it its own
      chrome spacing (navigator.standalone covers iOS versions that don't
@@ -114,60 +114,105 @@
     </button>
   </div>
 
-  <!-- about / info modal -->
+  <!-- about / info modal — grouped scrolling sheet (full-bleed on mobile) -->
   <div class="modal" id="info-modal" hidden>
     <div class="modal-backdrop" data-close></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
-      <button class="modal-close" type="button" data-close aria-label="Close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-          <line x1="6" y1="6" x2="18" y2="18" />
-          <line x1="18" y1="6" x2="6" y2="18" />
-        </svg>
-      </button>
 
-      <div class="modal-mark"><span>JY</span></div>
+      <header class="modal-head">
+        <div class="modal-htitle">
+          <span class="modal-mark"><span>JY</span></span>
+          <b id="info-title">Yamanote.fun</b>
+        </div>
+        <button class="modal-close" type="button" data-close aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+            <line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+      </header>
 
-      <span class="modal-eyebrow">About</span>
-      <h2 id="info-title">Station Melodies</h2>
-      <p>
-        Every station on Tokyo's Yamanote Line plays its own short departure
-        melody &mdash; a <em>hassha</em> jingle that signals the doors are about
-        to close. This app collects all of them and lets you ride the loop like
-        a playlist, inner or outer, station by station.
-      </p>
-      <p>
-        <!-- Write about the idea behind the project here. -->
-        I built it as a love letter to those few seconds of sound that bookend
-        every journey. Swipe (or use the controls) to move between stations and
-        let the loop run on its own.
-      </p>
+      <div class="modal-scroll">
 
-      <hr class="modal-divider" />
+        <!-- About -->
+        <section class="m-grp">
+          <p class="m-lbl">About</p>
+          <div class="m-card m-pad">
+            <h2 class="m-h">Station melodies</h2>
+            <p class="m-p">Every stop on Tokyo's Yamanote Line plays its own short departure jingle &mdash; a <em>hassha</em> melody that signals the doors are closing. This collects all of them so you can ride the whole loop like a playlist, inner or outer, station by station.</p>
+            <div class="m-note">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.5" /><line x1="12" y1="11" x2="12" y2="16.5" /><line x1="12" y1="7.6" x2="12.01" y2="7.6" />
+              </svg>
+              <span>Many of the 30 stations share the same handful of melodies &mdash; shared ones are marked in green below.</span>
+            </div>
+          </div>
+        </section>
 
-      <span class="modal-section-label">Take the melodies with you</span>
-      <a class="modal-download" href="#" download>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3v12" />
-          <path d="M7 11l5 5 5-5" />
-          <path d="M5 20h14" />
-        </svg>
-        Download the audio
-      </a>
+        <!-- The melodies -->
+        <section class="m-grp">
+          <p class="m-lbl">The melodies</p>
+          <div class="m-card">
+            <table class="m-tbl" id="melody-table">
+              <thead><tr><th>Station</th><th>Inner</th><th>Outer</th></tr></thead>
+              <tbody id="melody-rows"></tbody>
+            </table>
+            <button class="m-more" type="button" id="melody-toggle" aria-expanded="false">
+              <span id="melody-toggle-txt">Show all 30 stations</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+          </div>
+        </section>
 
-      <hr class="modal-divider" />
+        <!-- Take them with you -->
+        <section class="m-grp">
+          <p class="m-lbl">Take them with you</p>
+          <div class="m-card">
+            <!-- TODO: point href at the hosted zip of all MP3s on R2 -->
+            <a class="m-row" id="download-all" href="#" download>
+              <svg class="lead" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M7 11l5 5 5-5" /><path d="M5 20h14" /></svg>
+              <span class="m-txt">Download all melodies<span class="m-sub">MP3 &middot; all tracks, zipped</span></span>
+              <svg class="trail" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </a>
+            <a class="m-row" href="https://ko-fi.com/yamanotefun" target="_blank" rel="noopener noreferrer">
+              <svg class="lead" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 6.5-6.5l1 1 1-1a4.6 4.6 0 0 1 6.5 6.5z" /></svg>
+              <span class="m-txt">Support on Ko-fi<span class="m-sub">Help keep the project going</span></span>
+              <svg class="trail" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5" /><path d="M19 5 11 13" /><path d="M19 14v5H5V5h5" /></svg>
+            </a>
+            <a class="m-row" href="mailto:&#104;&#101;&#108;&#108;&#111;&#64;&#121;&#97;&#109;&#97;&#110;&#111;&#116;&#101;&#46;&#102;&#117;&#110;">
+              <svg class="lead" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>
+              <span class="m-txt">Get in touch<span class="m-sub">&#104;&#101;&#108;&#108;&#111;&#64;&#121;&#97;&#109;&#97;&#110;&#111;&#116;&#101;&#46;&#102;&#117;&#110;</span></span>
+              <svg class="trail" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </a>
+          </div>
+        </section>
 
-      <span class="modal-section-label">Get in touch</span>
-      <p class="modal-contact">
-        Questions, corrections or just want to say hi?<br />
-        <a href="mailto:&#104;&#101;&#108;&#108;&#111;&#64;&#121;&#97;&#109;&#97;&#110;&#111;&#116;&#101;&#46;&#102;&#117;&#110;" target="_blank" rel="noopener noreferrer">&#104;&#101;&#108;&#108;&#111;&#64;&#121;&#97;&#109;&#97;&#110;&#111;&#116;&#101;&#46;&#102;&#117;&#110;</a>
-      </p>
+        <!-- Settings -->
+        <section class="m-grp">
+          <p class="m-lbl">Settings</p>
+          <div class="m-card">
+            <div class="m-row m-row--static">
+              <svg class="lead" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" /></svg>
+              <span class="m-txt">Station names<span class="m-sub">Show titles in English or Japanese</span></span>
+              <span class="m-seg" id="lang-seg" role="group" aria-label="Station name language">
+                <button type="button" data-lang="en">EN</button>
+                <button type="button" data-lang="ja">JP</button>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <p class="m-foot">
+          Based on the <a href="https://w.atwiki.jp/ekimerowiki/pages/99.html" target="_blank" rel="noopener noreferrer">ekimero melody archive</a>.<br />
+          A vanilla-JS progressive web app, made with care.
+        </p>
+
+      </div>
     </div>
   </div>
 
-  <script src="js/stations.js?v=31"></script>
-  <script src="js/app.js?v=49"></script>
+  <script src="js/stations.js?v=33"></script>
+  <script src="js/app.js?v=50"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

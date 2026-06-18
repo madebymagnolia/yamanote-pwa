@@ -3,7 +3,12 @@
     "allow": [
       "Bash(find \"/Users/pauljackson/Documents/Yamanote Skill/Scrub Bar\" -type f | sort)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(grep -vc '\\\\.opus$')"
+      "Bash(grep -vc '\\\\.opus$')",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "WebFetch(domain:w.atwiki.jp)",
+      "Bash(curl -sL -A \"Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/17.2 Safari/605.1.15\" \"https://w.atwiki.jp/ekimerowiki/pages/99.html\" -o /tmp/ekimero.html -w \"HTTP %{http_code}, %{size_download} bytes\\\\n\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

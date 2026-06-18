@@ -216,6 +216,7 @@
 
   /* build the station elements (one copy — looping is modular) ------------- */
   const items = [];
+  const names = [];   // per-station name elements, for the EN/JP language toggle
   let spine;
   function build() {
     ribbon.innerHTML = "";
@@ -252,6 +253,7 @@
       el.appendChild(scrub);
       ribbon.appendChild(el);
       items[i]      = el;
+      names[i]      = name;
       itemScrubs[i] = scrub;
     }
   }
@@ -741,6 +743,75 @@
     });
   }
 
+  /* ── station-name language (EN romaji ⇄ JP kanji) ───────────────────────
+     Toggled from the info modal; persisted like the theme. Swaps each ribbon
+     name between st.name (romaji) and st.kanji. The melodies table keeps
+     romaji for legibility. */
+  const langSeg = document.getElementById("lang-seg");
+  function currentLang() {
+    try { return localStorage.getItem("yamanote-lang") === "ja" ? "ja" : "en"; }
+    catch (e) { return "en"; }
+  }
+  function applyLang(lang) {
+    for (let i = 0; i < N; i++) {
+      if (names[i]) names[i].textContent = lang === "ja" ? S[i].kanji : S[i].name;
+    }
+    if (langSeg) {
+      langSeg.querySelectorAll("[data-lang]").forEach((b) =>
+        b.classList.toggle("on", b.getAttribute("data-lang") === lang));
+    }
+    try { localStorage.setItem("yamanote-lang", lang); } catch (e) {}
+  }
+  if (langSeg) {
+    langSeg.querySelectorAll("[data-lang]").forEach((b) =>
+      b.addEventListener("click", () => applyLang(b.getAttribute("data-lang"))));
+  }
+
+  /* ── melodies table (built once, into the info modal) ────────────────────
+     One row per station: romaji name · inner melody · outer melody. Melody
+     names live in stations.js (melody.inner / .outer); blanks render as "—".
+     A name shared by more than one track is tinted green. Rows past the
+     fifth stay hidden until "Show all" expands the table. */
+  function buildMelodyTable() {
+    const tbody = document.getElementById("melody-rows");
+    if (!tbody || tbody.childElementCount) return;   // build only once
+
+    const counts = {};
+    S.forEach((st) => {
+      const m = st.melody || {};
+      [m.inner, m.outer].forEach((v) => { if (v) counts[v] = (counts[v] || 0) + 1; });
+    });
+
+    S.forEach((st, i) => {
+      const tr = document.createElement("tr");
+      if (i >= 5) tr.className = "m-extra";
+      const m = st.melody || {};
+      const stn = document.createElement("td");
+      stn.className = "m-stn";
+      stn.textContent = st.name;
+      tr.appendChild(stn);
+      [m.inner, m.outer].forEach((v) => {
+        const td = document.createElement("td");
+        td.className = "m-mel" + (v && counts[v] > 1 ? " shared" : "");
+        td.textContent = v || "—";
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  const melodyToggle = document.getElementById("melody-toggle");
+  if (melodyToggle) {
+    melodyToggle.addEventListener("click", () => {
+      const tbl = document.getElementById("melody-table");
+      const open = tbl.classList.toggle("expanded");
+      melodyToggle.classList.toggle("open", open);
+      melodyToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      document.getElementById("melody-toggle-txt").textContent =
+        open ? "Show fewer" : "Show all 30 stations";
+    });
+  }
+
   /* ── about / info modal ─────────────────────────────────────────────────
      Opens a dialog over the player. Backdrop + ✕ + Esc close it; focus moves
      into the card on open and returns to the info button on close, with a
@@ -916,6 +987,8 @@
   }
 
   build();
+  applyLang(currentLang());   // restore saved EN/JP station-name choice
+  buildMelodyTable();         // populate the info modal's melodies table
   measure();
   layout(false);
   setLoop(false);

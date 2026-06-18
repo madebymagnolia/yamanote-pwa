@@ -28,6 +28,10 @@
   --ctrl-blur:      none;                                /* glass blur (light only) */
   --dim:       rgba(255, 255, 255, 0.30);   /* inactive text            */
   --spine:     rgba(255, 255, 255, 0.30);   /* dotted-line dots         */
+  --m-card:    rgba(255, 255, 255, 0.045);  /* modal grouped-card surface */
+  --m-track:   rgba(0, 0, 0, 0.28);         /* modal segmented-control track */
+  --scroll-thumb:       rgba(255, 255, 255, 0.22);  /* modal scrollbar thumb */
+  --scroll-thumb-hover: rgba(255, 255, 255, 0.36);
 
   /* corner padding for the desktop dark-mode / info buttons */
   --corner-pad: 36px;
@@ -78,6 +82,10 @@ html[data-theme="light"] {
   --ctrl-shadow: 0 4px 18px rgba(25, 25, 23, 0.16), 0 1px 4px rgba(25, 25, 23, 0.12);
   --dim:       rgba(25, 25, 23, 0.3);
   --spine:     rgba(25, 25, 23, 0.22);
+  --m-card:    rgba(0, 0, 0, 0.035);
+  --m-track:   rgba(0, 0, 0, 0.06);
+  --scroll-thumb:       rgba(25, 25, 23, 0.22);
+  --scroll-thumb-hover: rgba(25, 25, 23, 0.36);
 }
 
 /* installed PWA (Home Screen, fullscreen) ─────────────────────────
@@ -504,7 +512,10 @@ body.booting .corner-ctrl {
               background-color var(--theme-dur, 0.45s) var(--ease) !important;
 }
 
-/* ── info modal ───────────────────────────────────────────────── */
+/* ── info modal ───────────────────────────────────────────────────
+   A grouped, scrolling sheet: fixed header + scrollable body of labelled
+   rounded-card sections. Floating card on desktop; full-bleed on mobile
+   (see the max-width:639px block at the end). ──────────────────────── */
 .modal[hidden] { display: none; }
 .modal {
   position: fixed;
@@ -528,17 +539,17 @@ body.booting .corner-ctrl {
 
 .modal-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 416px;
+  max-width: 432px;
   max-height: calc(100dvh - 48px);
   max-height: calc(100vh - 48px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   background: var(--panel);
   color: var(--fg);
   border: 1px solid var(--panel-edge);
-  border-radius: 24px;
-  padding: 34px 30px 32px;
+  border-radius: 22px;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.5),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
   transform: translateY(18px) scale(0.97);
@@ -547,117 +558,221 @@ body.booting .corner-ctrl {
 }
 .modal.open .modal-card { transform: none; opacity: 1; }
 
-.modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--fg);
-  opacity: 0.45;
-  cursor: pointer;
-  transition: opacity 0.2s var(--ease), background-color 0.2s var(--ease);
+/* fixed header — the body below it scrolls */
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 16px 14px 18px;
+  border-bottom: 1px solid var(--panel-edge);
+  flex-shrink: 0;
 }
-.modal-close:hover { opacity: 1; }
-
-/* small JY mark echoing the app icon */
+.modal-htitle { display: flex; align-items: center; gap: 10px; }
+.modal-htitle b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
 .modal-mark {
-  width: 52px;
-  height: 52px;
-  border-radius: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: var(--green);
   display: grid;
   place-items: center;
-  margin-bottom: 18px;
+  flex-shrink: 0;
 }
 .modal-mark span {
   display: grid;
   place-items: center;
-  width: calc(100% - 9px);
-  height: calc(100% - 9px);
-  border-radius: 6px;
+  width: calc(100% - 7px);
+  height: calc(100% - 7px);
+  border-radius: 5px;
   background: var(--panel);
   color: var(--fg);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 11px;
   letter-spacing: 0.03em;
+  transition: background-color var(--theme-dur, 0.45s) var(--ease);
 }
-
-.modal-eyebrow {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--green);
-  margin-bottom: 8px;
-}
-.modal-card h2 {
-  margin: 0 0 14px;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-.modal-card p {
-  margin: 0 0 14px;
-  font-size: 15.5px;
-  line-height: 1.55;
-  color: var(--fg);
-  opacity: 0.78;
-  text-wrap: pretty;
-}
-.modal-divider {
-  height: 1px;
-  margin: 22px 0;
-  background: var(--panel-edge);
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
   border: 0;
+  border-radius: 50%;
+  background: rgba(127, 127, 127, 0.14);
+  color: var(--fg);
+  opacity: 0.6;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s var(--ease);
 }
-.modal-section-label {
-  display: block;
+.modal-close:hover { opacity: 1; }
+
+.modal-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px 16px 22px;
+  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+/* WebKit (Chrome/Safari/Edge): a slim, palette-matched thumb on a transparent
+   track. The transparent border + padding-box clip insets the visible thumb so
+   it reads as ~4px with breathing room rather than a full-width bar. */
+.modal-scroll::-webkit-scrollbar { width: 9px; }
+.modal-scroll::-webkit-scrollbar-track { background: transparent; }
+.modal-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s var(--ease);
+}
+.modal-scroll::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-thumb-hover); }
+
+/* grouped sections */
+.m-grp { margin: 0 0 20px; }
+.m-grp:last-of-type { margin-bottom: 14px; }
+.m-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 4px 8px;
+}
+.m-card {
+  background: var(--m-card);
+  border: 1px solid var(--panel-edge);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.m-pad { padding: 14px 15px; }
+.m-h { margin: 0 0 7px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+.m-p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--fg); opacity: 0.72; text-wrap: pretty; }
+.m-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: rgba(50, 205, 102, 0.1);
+  border-radius: 10px;
+  padding: 9px 11px;
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.m-note svg { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+/* rows (links + settings) */
+.m-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-top: 1px solid var(--panel-edge);
+  color: var(--fg);
+  text-decoration: none;
+  cursor: pointer;
+}
+.m-row:first-child { border-top: 0; }
+.m-row > svg.lead { color: var(--green); flex-shrink: 0; }
+.m-row > svg.trail { color: var(--dim); flex-shrink: 0; }
+.m-txt { flex: 1; font-size: 13.5px; }
+.m-sub { display: block; font-size: 11.5px; color: var(--dim); margin-top: 2px; }
+.m-row--static { cursor: default; }
+
+/* melodies table */
+.m-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.m-tbl th {
+  text-align: left;
+  color: var(--dim);
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 11px 14px 8px;
+  background: rgba(127, 127, 127, 0.08);
+}
+.m-tbl td { padding: 9px 14px; border-top: 1px solid var(--panel-edge); }
+.m-tbl .m-stn { font-weight: 700; }
+.m-tbl .m-mel { color: var(--dim); }
+.m-tbl .m-mel.shared { color: var(--green); }
+.m-tbl tr.m-extra { display: none; }
+.m-tbl.expanded tr.m-extra { display: table-row; }
+.m-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--panel-edge);
+  background: rgba(127, 127, 127, 0.06);
+  color: var(--green);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 12px;
+  cursor: pointer;
+}
+.m-more svg { transition: transform 0.2s var(--ease); }
+.m-more.open svg { transform: rotate(180deg); }
+
+/* segmented language toggle */
+.m-seg {
+  display: flex;
+  background: var(--m-track);
+  border-radius: 999px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+.m-seg button {
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--fg);
-  opacity: 0.5;
-  margin-bottom: 10px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s var(--ease), background-color 0.2s var(--ease);
 }
-.modal-download {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 20px;
-  border-radius: 14px;
-  background: var(--green);
-  color: #fff;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap;
-  text-decoration: none;
-  transition: filter 0.18s var(--ease), transform 0.18s var(--ease);
-}
-.modal-download:hover  { filter: brightness(1.08); }
-.modal-download:active { transform: scale(0.97); }
-.modal-download svg { display: block; }
+.m-seg button.on { background: var(--green); color: #fff; }
 
-.modal-contact {
-  margin-top: 6px;
-  font-size: 15px;
+.m-foot {
+  font-size: 11.5px;
   line-height: 1.5;
-  opacity: 0.78;
+  color: var(--dim);
+  text-align: center;
+  margin: 4px 8px 0;
 }
-.modal-contact a {
-  color: var(--green);
-  text-decoration: none;
-  font-weight: 500;
+.m-foot a { color: var(--green); text-decoration: none; }
+.m-foot a:hover { text-decoration: underline; }
+
+/* mobile: full-bleed sheet rather than a floating card */
+@media (max-width: 639px) {
+  .modal { padding: 0; }
+  .modal-card {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: translateY(26px);
+  }
+  .modal.open .modal-card { transform: none; }
+  .modal-head {
+    padding-top: calc(15px + env(safe-area-inset-top, 0px));
+    padding-left: calc(18px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+  }
+  .modal-scroll {
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  }
 }
-.modal-contact a:hover { text-decoration: underline; }
 
 /* ── scrub bar ────────────────────────────────────────────────
    Lives INSIDE each .station element, positioned below the name.

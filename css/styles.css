@@ -918,13 +918,13 @@ html[data-theme="light"] .modal-mark svg .rails {
 }
 
 
-/* ── landscape guard (installed PWA) ───────────────────────────────
-   iOS ignores the manifest's "orientation": "portrait" for home-screen
-   PWAs and offers no JS orientation lock, so when the installed app is
-   turned landscape we cover it with a "rotate back" prompt rather than
-   letting the portrait-tuned layout break. Hidden by default; shown only
-   when standalone AND landscape. Both standalone signals are honoured to
-   match the rest of the stylesheet (class for old iOS, media query for new). */
+/* ── landscape guard (mobile browser + installed PWA) ──────────────
+   The layout is tuned for a portrait phone column, so we cover landscape
+   with a "rotate back" prompt rather than letting it break. Shown on any
+   touch device in landscape — (hover: none) and (pointer: coarse) keep this
+   off desktop, where landscape is the normal, supported orientation. The
+   standalone rules below remain so older iOS (which has no orientation lock
+   API and ignores the manifest's portrait lock) is covered there too. */
 .rotate-lock {
   display: none;
   position: fixed;
@@ -950,6 +950,9 @@ html[data-theme="light"] .modal-mark svg .rails {
 }
 .rotate-lock svg { color: var(--green); }
 
+@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+  .rotate-lock { display: flex; }
+}
 @media (orientation: landscape) {
   html.standalone .rotate-lock { display: flex; }
 }

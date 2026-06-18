@@ -373,7 +373,7 @@
 
   function jumpTo(i) {
     step(offsetOf(i));
-    syncAudio(true);
+    syncAudioNav(true);
   }
 
   /* ───────────────────────────────────────────────────────────────────────
@@ -445,8 +445,9 @@
   // self-corrects the instant the real duration is known, paused or not.
   audioEl.addEventListener("loadedmetadata", () => { updatePositionState(); updateScrubBar(); });
 
-  let current    = null;   // audioEl once a track is armed for this station, else null
-  let currentKey = null;   // cacheKey of whatever src audioEl currently holds
+  let current      = null;   // audioEl once a track is armed for this station, else null
+  let currentKey   = null;   // cacheKey of whatever src audioEl currently holds
+  let navAudioTimer = null;  // debounces the deferred audio switch during navigation
 
   // Network-only warm-up for the likely-next tracks. No second <audio>
   // element is created — that was the source of the decode contention — so
@@ -469,7 +470,10 @@
     if (pv) prefetch(srcFor(currentIndex - direction * pv.dist));
     const other = (direction === +1 ? "inner" : "outer");
     const a = S[normIdx(currentIndex)].audio;
-    if (a && a[other]) prefetch(a[other]);
+    // a[other] is the extension-LESS base URL from stations.js — it must go
+    // through the same AUDIO_EXT append as srcFor(), or it 404s on the worker
+    // (R2 only has JY..-Inner.opus / .m4a, never the bare key).
+    if (a && a[other]) prefetch(a[other] + AUDIO_EXT);
   }
 
   // Scan from the current station in `dir` for the nearest station that has a
@@ -510,19 +514,14 @@
   // via a double rAF to dodge an unrelated layout-thrashing bug in
   // buildScrubBar() — that bug is now fixed at its actual source, so the
   // defer was both unnecessary and broke Safari. Don't reintroduce it.)
-  // Run fn after the browser has painted the current frame. The first rAF
-  // fires just before the next paint; the second fires on the following frame,
-  // by which point that paint has landed. Lets us keep non-urgent work off the
-  // critical path of an animation that is starting in this same task.
-  function afterPaint(fn) {
-    requestAnimationFrame(() => requestAnimationFrame(fn));
-  }
 
   // Switch the shared <audio> to the current station's track and, if the deck
-  // is playing, start it. This is the expensive part: on Chrome, pausing and
-  // reassigning .src on a live element does enough synchronous work to delay
-  // the next paint — so it must NOT run in the same task as step()'s transform
-  // change. syncAudio() decides whether to call this now or after the paint.
+  // is playing, start it. This is the expensive part on live: assigning .src
+  // kicks off a ~1 MB download + decode, and preloadNeighbors() fires more
+  // full-file fetches — exactly the media I/O that's absent on localhost (where
+  // every audio request 403s at the worker's referer gate), which is why the
+  // ribbon slide stutters on live but not local. syncAudioNav() keeps this off
+  // the animation; syncAudio() runs it immediately for non-animated actions.
   function applyAudio(restart) {
     const src = srcFor(currentIndex);
     const key = cacheKey(currentIndex);
@@ -548,23 +547,32 @@
     preloadNeighbors();
   }
 
+  // Immediate audio sync — for play/pause, loop toggle, and boot. There's no
+  // ribbon slide running for these, so the media work can't stutter anything,
+  // and the user expects an instant response (and Safari needs play() in the
+  // gesture). Always builds the scrub bar first (visual, must track the station).
   function syncAudio(restart) {
-    // The scrub bar is visual — build it immediately so it tracks the station
-    // in lock-step with the slide. (Navigation also builds it in step(); this
-    // covers the loop-toggle / play / boot callers.) Guarded, so it's cheap.
     buildScrubBar();
+    applyAudio(restart);
+  }
 
-    // Navigation runs step() — which arms the ribbon's CSS slide — then
-    // syncAudio() in the SAME task, and the browser can't paint the slide's
-    // first frame until that task ends. applyAudio() is heavy enough on Chrome
-    // to delay that frame, so the slide visibly waits for the track to swap and
-    // then animates. Chrome/Firefox keep sticky activation after a click, so we
-    // push the whole switch past the first paint and let the ribbon animate
-    // unblocked. Safari/WebKit only honour play() inside the synchronous gesture
-    // (deferring it is what broke playback before) and animate smoothly anyway,
-    // so there we run it synchronously.
-    if (isWebKit) applyAudio(restart);
-    else afterPaint(() => applyAudio(restart));
+  // Navigation audio sync — keeps the ribbon slide completely free of media
+  // work. The slide is a 620 ms CSS transition; running the track's load/decode
+  // (and neighbour prefetch) during it is what makes live janky where local is
+  // smooth. On Chrome/Firefox we defer the whole switch until the slide has
+  // settled, debounced so a flurry of swipes/clicks only loads the FINAL track
+  // (and the previous station keeps playing meanwhile, switching as the new one
+  // arrives). Sticky activation lets the deferred play() proceed. Safari/WebKit
+  // only honour play() inside the synchronous gesture call stack and animate
+  // smoothly with the immediate switch, so there we run it now.
+  function syncAudioNav(restart) {
+    buildScrubBar();   // visual — immediate, in lock-step with the slide
+    if (isWebKit) {
+      applyAudio(restart);
+    } else {
+      clearTimeout(navAudioTimer);
+      navAudioTimer = setTimeout(function () { applyAudio(restart); }, DUR_MS);
+    }
   }
 
   /* ───────────────────────────────────────────────────────────────────────
@@ -640,7 +648,7 @@
   // Move the ribbon by `delta` stations, then resync audio from the start.
   function gotoTrack(delta) {
     step(delta);
-    syncAudio(true);
+    syncAudioNav(true);
   }
 
   function transportNext() {
@@ -819,7 +827,7 @@
   function commitStep(dir) {
     ribbon.classList.remove("dragging");    // re-arm the transform transition
     ribbon.style.transform = "translateY(0)";   // hand off into the step anim
-    step(dir); syncAudio(true);
+    step(dir); syncAudioNav(true);
   }
 
   stage.addEventListener("touchstart", (e) => {
@@ -859,7 +867,7 @@
     ribbon.classList.remove("dragging");    // re-arm the transform transition
     ribbon.style.transform = "translateY(0)";   // spring back / hand off
     // Lifted before the threshold: a quick flick still commits.
-    if (Math.abs(vel) > COMMIT_V) { step(dy < 0 ? +1 : -1); syncAudio(true); }
+    if (Math.abs(vel) > COMMIT_V) { step(dy < 0 ? +1 : -1); syncAudioNav(true); }
   }
 
   stage.addEventListener("touchend", (e) => endDrag(e.changedTouches[0].clientY), { passive: true });

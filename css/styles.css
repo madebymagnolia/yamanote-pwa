@@ -573,7 +573,7 @@ body.booting .corner-ctrl {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: var(--green);
+  /* background: var(--green); */
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -584,12 +584,22 @@ body.booting .corner-ctrl {
   width: calc(100% - 7px);
   height: calc(100% - 7px);
   border-radius: 5px;
-  background: var(--panel);
+  /* background: var(--panel); */
   color: var(--fg);
   font-weight: 700;
   font-size: 11px;
   letter-spacing: 0.03em;
   transition: background-color var(--theme-dur, 0.45s) var(--ease);
+}
+.modal-mark svg {
+  height: 24px;
+  width: auto;
+}
+.modal-mark svg .rails {
+  fill: var(--fg);
+}
+html[data-theme="light"] .modal-mark svg .rails {
+  fill: #191917;
 }
 .modal-close {
   width: 32px;

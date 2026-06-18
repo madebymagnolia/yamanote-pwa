@@ -53,7 +53,7 @@ window.YAMANOTE_STATIONS = [
   },
   { jy: "06", name: "Uguisudani",       kanji: "鶯谷",   artwork: "artwork/JY06.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY06-Uguisudani-Inner",       outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY06-Uguisudani-Outer" },
-    melody: { inner: "Spring (Tremolo)", outer: "Babbling brook (emphasis on the bell)" },
+    melody: { inner: "Spring (Tremolo)", outer: "Babbling Brook" },
     sections: {
       outer: [ { label: "Melody", end: 11.7 }, { label: "Door Chime", end: 15.5 }, { label: "Ambience", end: 19.8 }, { label: "Announcement", end: 46.3 }, { label: "Ambience", end: 52 }, { label: "Door Chime", end: 57.7 } ],
       inner: [ { label: "Melody", end: 11 }, { label: "Door Chime", end: 14.7 }, { label: "Ambience", end: 24 }, { label: "Announcement", end: 60 }, { label: "Ambience", end: 63 }, { label: "Door Chime", end: 72.8 } ]
@@ -61,7 +61,7 @@ window.YAMANOTE_STATIONS = [
   },
   { jy: "07", name: "Nippori",          kanji: "日暮里", artwork: "artwork/JY07.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY07-Nippori-Inner",          outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY07-Nippori-Outer" },
-    melody: { inner: "JRE-IKST-010-01", outer: "Babbling brook (emphasis on the bell)" },
+    melody: { inner: "JRE-IKST-010-01", outer: "Babbling Brook" },
     sections: {
       outer: [ { label: "Melody", end: 12.6 }, { label: "Door Chime", end: 16.3 }, { label: "Ambience", end: 21.6 }, { label: "Announcement", end: 47.6 }, { label: "Ambience", end: 52.5 }, { label: "Door Chime", end: 58.5 }, {label: "Station Announcement", end: 74.3 } ],
       inner: [ { label: "Melody", end: 8 }, { label: "Door Chime", end: 11.6 }, { label: "Ambience", end: 19.3 }, { label: "Announcement", end: 33.5 }, { label: "Ambience", end: 44.2 }, { label: "Door Chime", end: 52 } ]
@@ -77,7 +77,7 @@ window.YAMANOTE_STATIONS = [
   },
   { jy: "09", name: "Tabata",           kanji: "田端",   artwork: "artwork/JY09.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY09-Tabata-Inner",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY09-Tabata-Outer" },
-    melody: { inner: "JRE-IKST-010-01", outer: "Babbling brook (emphasis on the bell)" },
+    melody: { inner: "JRE-IKST-010-01", outer: "Babbling Brook" },
     sections: {
       outer: [ { label: "Melody", end: 11.7 }, { label: "Door Chime", end: 15.7 }, { label: "Ambience", end: 26 }, { label: "Announcement", end: 71.6 }, { label: "Ambience", end: 76.4 }, { label: "Door Chime", end: 82.7 } ],
       inner: [ { label: "Melody", end: 7.9 }, { label: "Door Chime", end: 11.4 }, { label: "Ambience", end: 20.7 }, { label: "Announcement", end: 46.4 }, { label: "Ambience", end: 52 }, { label: "Door Chime", end: 59.1 } ]
@@ -93,7 +93,7 @@ window.YAMANOTE_STATIONS = [
   },
   { jy: "11", name: "Sugamo",           kanji: "巣鴨",   artwork: "artwork/JY11.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY11-Sugamo-Inner",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY11-Sugamo-Outer" },
-    melody: { inner: "Spring (Standard)", outer: "Babbling brook (emphasis on the bell)" },
+    melody: { inner: "Spring (Standard)", outer: "Babbling Brook" },
     sections: {
       outer: [ { label: "Melody", end: 11.7 }, { label: "Door Chime", end: 15.2 }, { label: "Ambience", end: 27.1 }, { label: "Announcement", end: 49 }, { label: "Ambience", end: 56.2 }, { label: "Door Chime", end: 62.7 } ],
       inner: [ { label: "Melody", end: 11 }, { label: "Door Chime", end: 14.5 }, { label: "Ambience", end: 23 }, { label: "Announcement", end: 68 }, { label: "Ambience", end: 72 }, { label: "Door Chime", end: 82 } ]
@@ -101,7 +101,7 @@ window.YAMANOTE_STATIONS = [
   },
   { jy: "12", name: "Ōtsuka",           kanji: "大塚",   artwork: "artwork/JY12.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY12-Otsuka-Inner",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY12-Otsuka-Outer" },
-    melody: { inner: "Spring (Standard)", outer: "Babbling brook (emphasis on the bell)" },
+    melody: { inner: "Spring (Standard)", outer: "Babbling Brook" },
     sections: {
       outer: [ { label: "Melody", end: 11.9 }, { label: "Door Chime", end: 15.6 }, { label: "Ambience", end: 26.5 }, { label: "Announcement", end: 70.3 }, { label: "Ambience", end: 74 }, { label: "Door Chime", end: 80.9 } ],
       inner: [ { label: "Melody", end: 11.4 }, { label: "Door Chime", end: 14.9 }, { label: "Ambience", end: 25 }, { label: "Announcement", end: 46.2 }, { label: "Ambience", end: 55.5 }, { label: "Door Chime", end: 64.3 } ]
@@ -117,7 +117,7 @@ window.YAMANOTE_STATIONS = [
   },
   { jy: "14", name: "Mejiro",           kanji: "目白",   artwork: "artwork/JY14.png",
     audio: { inner: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY14-Mejiro-Inner",           outer: "https://yamanote-audio-8beb.pacifierpacifies.workers.dev/JY14-Mejiro-Outer" },
-    melody: { inner: "Spring (Standard)", outer: "Babbling brook (emphasis on the bell)" },
+    melody: { inner: "Spring (Standard)", outer: "Babbling Brook" },
     sections: {
       outer: [ { label: "Melody", end: 11.6 }, { label: "Door Chime", end: 15 }, { label: "Ambience", end: 24 }, { label: "Announcement", end: 50 }, { label: "Ambience", end: 59 }, { label: "Door Chime", end: 67 } ],
       inner: [ { label: "Melody", end: 10.9 }, { label: "Door Chime", end: 14.4 }, { label: "Ambience", end: 24 }, { label: "Announcement", end: 67.3 }, { label: "Ambience", end: 72.8 }, { label: "Door Chime", end: 81.4 } ]

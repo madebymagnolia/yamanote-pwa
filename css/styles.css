@@ -542,7 +542,7 @@ body.booting .corner-ctrl {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 432px;
+  max-width: 480px;
   max-height: calc(100dvh - 48px);
   max-height: calc(100vh - 48px);
   overflow: hidden;
@@ -646,7 +646,7 @@ body.booting .corner-ctrl {
   overflow: hidden;
 }
 .m-pad { padding: 14px 15px; }
-.m-h { margin: 0 0 7px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+.m-h { margin: 0 0 20px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
 .m-p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--fg); opacity: 0.72; text-wrap: pretty; }
 .m-note {
   display: flex;

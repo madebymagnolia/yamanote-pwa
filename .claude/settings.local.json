@@ -9,7 +9,14 @@
       "WebFetch(domain:w.atwiki.jp)",
       "Bash(curl -sL -A \"Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/17.2 Safari/605.1.15\" \"https://w.atwiki.jp/ekimerowiki/pages/99.html\" -o /tmp/ekimero.html -w \"HTTP %{http_code}, %{size_download} bytes\\\\n\")",
       "Bash(node -e ' *)",
-      "Bash(node --check sw.js)"
+      "Bash(node --check sw.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh auth *)",
+      "Bash(git remote *)",
+      "Bash(echo \"remote: $\\(git remote get-url origin\\)\")",
+      "Bash(git config *)"
     ]
   }
 }

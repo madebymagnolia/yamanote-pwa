@@ -28,6 +28,7 @@
   --ctrl-blur:      none;                                /* glass blur (light only) */
   --dim:       rgba(255, 255, 255, 0.30);   /* inactive text            */
   --scrub-hover: rgba(255, 255, 255, 0.5);  /* scrub segment hover (lighter than --dim) */
+  --scrub-chip-grey: rgb(140, 140, 138);    /* grey hover chip (mirrors the green chip) */
   --spine:     rgba(255, 255, 255, 0.30);   /* dotted-line dots         */
   --m-card:    rgba(255, 255, 255, 0.045);  /* modal grouped-card surface */
   --m-track:   rgba(0, 0, 0, 0.28);         /* modal segmented-control track */
@@ -83,6 +84,7 @@ html[data-theme="light"] {
   --ctrl-shadow: 0 4px 18px rgba(25, 25, 23, 0.16), 0 1px 4px rgba(25, 25, 23, 0.12);
   --dim:       rgba(25, 25, 23, 0.3);
   --scrub-hover: rgba(25, 25, 23, 0.5);
+  --scrub-chip-grey: rgb(120, 120, 116);
   --spine:     rgba(25, 25, 23, 0.22);
   --m-card:    rgba(0, 0, 0, 0.035);
   --m-track:   rgba(0, 0, 0, 0.06);
@@ -863,6 +865,13 @@ html[data-theme="light"] .modal-mark svg .rails {
               border-color var(--theme-dur, 0.45s) var(--ease);
 }
 
+/* Grey twin shown above a hovered inactive segment (see scrub click/hover JS) */
+.scrub-chip--hover {
+  background-color: var(--scrub-chip-grey);
+  z-index: 4;   /* above the active chip during the swap */
+}
+.scrub-chip.is-hidden { display: none; }
+
 .scrub-track {
   position: relative;
   display: flex;
@@ -889,8 +898,9 @@ html[data-theme="light"] .modal-mark svg .rails {
 .scrub-segment::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
+  left: -2px;    /* extend into half of each 4px gap so adjacent hit areas tile
+                    with no dead zone — keeps hover continuous across segments */
+  right: -2px;
   top: -11px;
   bottom: -11px;
 }

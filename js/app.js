@@ -33,6 +33,7 @@
   // that always point to the *active* station's scrub elements.
   const itemScrubs    = [];
   let   scrubChip      = null;
+  let   scrubHoverChip = null;   // grey chip shown above a hovered inactive segment
   let   scrubTimeCur   = null;
   let   scrubTimeTotal = null;
   let   scrubTrack     = null;
@@ -80,6 +81,7 @@
 
     container.innerHTML = "";
     scrubChip      = null;
+    scrubHoverChip = null;
     scrubTimeCur   = null;
     scrubTimeTotal = null;
     scrubTrack     = null;
@@ -109,6 +111,12 @@
     scrubChip.textContent = sections[0].label;
     scrubTrack.appendChild(scrubChip);
 
+    // Grey twin shown above whichever inactive segment is being hovered; the
+    // green active chip hides while it's up, and returns on mouse-out.
+    scrubHoverChip = document.createElement("div");
+    scrubHoverChip.className = "scrub-chip scrub-chip--hover is-hidden";
+    scrubTrack.appendChild(scrubHoverChip);
+
     // Head lives inside the track; segments are inserted before it.
     scrubHead = document.createElement("div");
     scrubHead.className = "scrub-head";
@@ -132,10 +140,26 @@
         if (seg.classList.contains("scrub-segment--active")) return;  // already here
         try { current.currentTime = segStart; } catch (e) {}
         updateScrubBar();   // reflect the jump immediately, even while paused
+        hideHoverChip();    // this segment is now active — swap grey chip for green at once
       });
       scrubTrack.insertBefore(seg, scrubHead);
       scrubSegments.push(seg);
     });
+
+    // Chip swap is handled at the track level (not per segment) so moving the
+    // cursor horizontally across the gaps never flickers back to the active
+    // chip: the grey chip only reverts on a true vertical exit (track
+    // mouseleave) or when the cursor reaches the active segment.
+    scrubTrack.addEventListener("mousemove", function (e) {
+      const seg = e.target.closest && e.target.closest(".scrub-segment");
+      if (!seg) return;
+      if (seg.classList.contains("scrub-segment--active")) { hideHoverChip(); return; }
+      const i = scrubSegments.indexOf(seg);
+      const secs = currentSections();
+      if (i < 0 || !secs || !secs[i]) return;
+      showHoverChip(i, secs[i].label);
+    });
+    scrubTrack.addEventListener("mouseleave", hideHoverChip);
 
     scrubTimeTotal = document.createElement("span");
     scrubTimeTotal.className = "scrub-time scrub-time-total";
@@ -147,6 +171,34 @@
     // this is just style writes: no forced reflow, and the chip starts in the
     // right place instead of flashing at the track's left edge for a frame.
     updateScrubBar();
+  }
+
+  // Track-relative `left` for the centre of section i, using the same gap-aware
+  // calc() the active chip uses (see updateScrubBar's posCalc). Pure calc() is
+  // scale-independent — unlike getBoundingClientRect, which returns scaled px on
+  // the 125%-zoomed desktop ribbon and would push the chip off-centre.
+  function sectionCenterCalc(i) {
+    const sections = currentSections();
+    if (!sections || !sections[i]) return "0px";
+    const sumDur   = sections[sections.length - 1].end || 1;
+    const totalGap = (sections.length - 1) * SCRUB_GAP;
+    const segStart = i > 0 ? sections[i - 1].end : 0;
+    const tv       = (segStart + sections[i].end) / 2;
+    const frac     = Math.min(1, Math.max(0, tv / sumDur));
+    return "calc(" + frac + " * (100% - " + totalGap + "px) + " + (i * SCRUB_GAP) + "px)";
+  }
+
+  // Grey hover chip: centre it over section i and hide the active chip.
+  function showHoverChip(i, label) {
+    if (!scrubHoverChip) return;
+    scrubHoverChip.style.left = sectionCenterCalc(i);
+    scrubHoverChip.textContent = label;
+    scrubHoverChip.classList.remove("is-hidden");
+    if (scrubChip) scrubChip.classList.add("is-hidden");
+  }
+  function hideHoverChip() {
+    if (scrubHoverChip) scrubHoverChip.classList.add("is-hidden");
+    if (scrubChip) scrubChip.classList.remove("is-hidden");
   }
 
   // Keep in sync with the `gap` on .scrub-track in styles.css.

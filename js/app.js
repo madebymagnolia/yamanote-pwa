@@ -857,8 +857,9 @@
     });
     return Array.from(urls);
   }
-  // Opus and m4a land within a few % of each other in practice (~0.95 MB/track).
-  const offlineSizeEstimateMB = () => Math.round(offlineUrls().length * 0.95);
+  // Measured total of every opus/m4a track combined — opus and m4a land
+  // within a few % of each other in practice, so one figure covers both.
+  const OFFLINE_SIZE_MB = 68.7;
 
   const offlineBtn = document.getElementById("offline-btn");
   const offlineSub = document.getElementById("offline-sub");
@@ -872,7 +873,7 @@
     if (state === "idle") {
       offlineBtn.textContent = "Download";
       offlineBtn.disabled = false;
-      offlineSub.textContent = "Save all tracks on this device (~" + offlineSizeEstimateMB() + " MB)";
+      offlineSub.textContent = "Save all tracks on this device (" + OFFLINE_SIZE_MB + " MB)";
     } else if (state === "progress") {
       offlineBtn.textContent = "Cancel";
       offlineBtn.disabled = false;

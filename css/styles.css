@@ -31,6 +31,7 @@
   --scrub-chip-grey: rgb(140, 140, 138);    /* grey hover chip (mirrors the green chip) */
   --spine:     rgba(255, 255, 255, 0.30);   /* dotted-line dots         */
   --m-card:    rgba(255, 255, 255, 0.045);  /* modal grouped-card surface */
+  --m-row-hover: rgba(255, 255, 255, 0.06); /* modal link-row hover */
   --m-track:   rgba(0, 0, 0, 0.28);         /* modal segmented-control track */
   --scroll-thumb:       rgba(255, 255, 255, 0.22);  /* modal scrollbar thumb */
   --scroll-thumb-hover: rgba(255, 255, 255, 0.36);
@@ -87,6 +88,7 @@ html[data-theme="light"] {
   --scrub-chip-grey: rgb(120, 120, 116);
   --spine:     rgba(25, 25, 23, 0.22);
   --m-card:    rgba(0, 0, 0, 0.035);
+  --m-row-hover: rgba(0, 0, 0, 0.05);
   --m-track:   rgba(0, 0, 0, 0.06);
   --scroll-thumb:       rgba(25, 25, 23, 0.22);
   --scroll-thumb-hover: rgba(25, 25, 23, 0.36);
@@ -670,7 +672,7 @@ html[data-theme="light"] .modal-mark svg .rails {
 }
 .m-pad { padding: 14px 15px; }
 .m-h { margin: 0 0 20px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
-.m-p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--fg); opacity: 0.72; text-wrap: pretty; }
+.m-p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--fg); opacity: 0.72; text-wrap: stable; }
 .m-note {
   display: flex;
   gap: 8px;
@@ -701,6 +703,7 @@ html[data-theme="light"] .modal-mark svg .rails {
 .m-txt { flex: 1; font-size: 13.5px; }
 .m-sub { display: block; font-size: 11.5px; color: var(--dim); margin-top: 2px; }
 .m-row--static { cursor: default; }
+a.m-row:hover { background: var(--m-row-hover); }
 
 /* melodies table */
 .m-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }

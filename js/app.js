@@ -505,7 +505,9 @@
   audioEl.addEventListener("ended", () => {
     // A station played all the way through — let the PWA install module know
     // (it waits for this before offering to install). Fire before advancing.
-    window.dispatchEvent(new CustomEvent("stationComplete"));
+    window.dispatchEvent(new CustomEvent("stationComplete", {
+      detail: { station: S[normIdx(currentIndex)].name, loop: loopKey() }
+    }));
     transportNext();
   });
   audioEl.addEventListener("timeupdate",     updatePositionState);

@@ -136,39 +136,6 @@ const CSS = `
   -webkit-backdrop-filter: var(--ctrl-blur); backdrop-filter: var(--ctrl-blur);
 }
 .pwa-btn--dismiss:active { background: var(--ctrl-bg-active); }
-
-/* floating bouncing arrow that points at a browser button */
-.pwa-arrow {
-  position: fixed; z-index: 9002;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  color: var(--green); pointer-events: none; text-align: center;
-  opacity: 0; transition: opacity 0.3s var(--ease);
-}
-.pwa-arrow.pwa-open { opacity: 1; }
-.pwa-arrow--down {
-  left: 50%; transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
-}
-.pwa-arrow--up {
-  right: 12px;
-  top: calc(env(safe-area-inset-top, 0px) + 10px);
-}
-.pwa-arrow-label {
-  font-size: 12px; font-weight: 700; letter-spacing: -0.01em;
-  color: var(--green); white-space: nowrap;
-  background: var(--panel); border: 1px solid var(--panel-edge);
-  border-radius: 9px; padding: 5px 9px;
-}
-.pwa-arrow-glyph { font-size: 36px; line-height: 1; font-weight: 700; }
-.pwa-arrow--down .pwa-arrow-glyph { animation: pwa-bounce-down 1.1s var(--ease) infinite; }
-.pwa-arrow--up   .pwa-arrow-glyph { animation: pwa-bounce-up   1.1s var(--ease) infinite; }
-@keyframes pwa-bounce-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
-@keyframes pwa-bounce-up   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .pwa-arrow--down .pwa-arrow-glyph,
-  .pwa-arrow--up .pwa-arrow-glyph { animation: none; }
-}
 `;
 
 function injectStyles() {
@@ -180,31 +147,27 @@ function injectStyles() {
 }
 
 // ── overlay lifecycle ───────────────────────────────────────────────
-// Each show* builds its sheet (+ optional arrow), appends them, then flips
-// the .pwa-open class on the next frame so the CSS transition runs.
+// Each show* builds its sheet, appends it, then flips the .pwa-open class on
+// the next frame so the CSS transition runs.
 let scrimEl = null;
 let sheetEl = null;
-let arrowEl = null;
 
-function mount(sheet, arrow) {
+function mount(sheet) {
   injectStyles();
 
   scrimEl = document.createElement("div");
   scrimEl.className = "pwa-scrim";
 
   sheetEl = sheet;
-  arrowEl = arrow || null;
 
   document.body.appendChild(scrimEl);
   document.body.appendChild(sheetEl);
-  if (arrowEl) document.body.appendChild(arrowEl);
 
   // force layout, then animate in
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       scrimEl.classList.add("pwa-open");
       sheetEl.classList.add("pwa-open");
-      if (arrowEl) arrowEl.classList.add("pwa-open");
     });
   });
 
@@ -212,7 +175,7 @@ function mount(sheet, arrow) {
 }
 
 function teardown() {
-  const els = [scrimEl, sheetEl, arrowEl].filter(Boolean);
+  const els = [scrimEl, sheetEl].filter(Boolean);
   els.forEach((el) => el.classList.remove("pwa-open"));
 
   let done = false;
@@ -220,7 +183,7 @@ function teardown() {
     if (done) return;
     done = true;
     els.forEach((el) => el.remove());
-    scrimEl = sheetEl = arrowEl = null;
+    scrimEl = sheetEl = null;
   };
   if (sheetEl) {
     sheetEl.addEventListener("transitionend", remove, { once: true });
@@ -319,12 +282,7 @@ function showIOSSafariSheet() {
   btns.appendChild(notNow);
   sheet.appendChild(btns);
 
-  // bouncing arrow above the Safari toolbar, pointing at the Share button
-  const arrow = el("div", "pwa-arrow pwa-arrow--down");
-  arrow.appendChild(el("span", "pwa-arrow-label", "Tap this button"));
-  arrow.appendChild(el("span", "pwa-arrow-glyph", "↓"));
-
-  mount(sheet, arrow);
+  mount(sheet);
 }
 
 // ── Scenario 3 — iOS in-app browser ("open in Safari") ──────────────
@@ -352,12 +310,7 @@ function showInAppBrowserSheet() {
   btns.appendChild(notNow);
   sheet.appendChild(btns);
 
-  // bouncing arrow near the top-right, pointing at the ••• menu
-  const arrow = el("div", "pwa-arrow pwa-arrow--up");
-  arrow.appendChild(el("span", "pwa-arrow-glyph", "↑"));
-  arrow.appendChild(el("span", "pwa-arrow-label", "Tap ••• first"));
-
-  mount(sheet, arrow);
+  mount(sheet);
 }
 
 // ── entry point ─────────────────────────────────────────────────────

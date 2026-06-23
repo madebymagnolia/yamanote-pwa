@@ -438,10 +438,6 @@ html[data-namelang="ja"] .station .name {
   transition: transform 0.18s var(--ease);
 }
 
-html[data-theme="light"] .ctrl.play {
-  box-shadow: none;
-}
-
 /* pressed feedback: shrink slightly and darken — consistent in both themes. */
 .ctrl:active   { transform: scale(0.9); }
 /* .ctrl.skip:active { filter: brightness(0.85); } */

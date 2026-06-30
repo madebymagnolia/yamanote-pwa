@@ -34,7 +34,8 @@
       "Bash(node build.js)",
       "Bash(node --check js/app.js)",
       "Bash(node --check js/analytics.js)",
-      "Bash(node --check build.js)"
+      "Bash(node --check build.js)",
+      "Bash(pkill -f \"http.server 8799\")"
     ]
   }
 }

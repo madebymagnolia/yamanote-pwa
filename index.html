@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<!-- All asset URLs are root-relative. The pre-rendered station shells live at
+     /{code}-{direction}/index.html, so without a base every relative asset
+     (css/, js/, manifest…) would resolve against that subdirectory, 404, and
+     fall through the SPA catch-all to index.html — breaking JS/CSS/manifest
+     MIME types. Pinning the base to "/" makes every shell load the real assets
+     from the site root. -->
+<base href="/" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
 <title>Yamanote.fun</title>
 <meta name="description" content="The sound of riding the Yamanote Line all the way around — every station's melody, chimes, announcements, and ambience, woven into one continuous journey through Tokyo." />

@@ -844,7 +844,7 @@
       url: SHARE_ORIGIN + path,
       path: path,
       title: st.name + " — Yamanote.fun",
-      text: "Listening to " + st.name + " on the Yamanote Line loop",
+      text: "Listen to the " + st.name + " melody on Yamanote.fun",
     };
   }
   function syncUrl() {

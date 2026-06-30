@@ -416,6 +416,10 @@ html[data-namelang="ja"] .station .name {
 }
 .ctrl svg { display: block; }
 
+button#share svg {
+  margin-top: -3px;
+}
+
 .ctrl.skip {
   width: 64px;
   height: 64px;

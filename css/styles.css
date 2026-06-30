@@ -447,14 +447,7 @@ html[data-namelang="ja"] .station .name {
 .play.playing .icon-play  { display: none; }
 .play.playing .icon-pause { display: block; }
 
-/* sun / moon icon swap — dark mode shows the SUN (tap → lighten),
-   light mode shows the MOON (tap → darken). */
-.theme-toggle .icon-moon { display: none; }
-.theme-toggle .icon-sun  { display: block; }
-html[data-theme="light"] .theme-toggle .icon-sun  { display: none; }
-html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
-
-/* ── dark-mode toggle + info buttons ──────────────────────────────
+/* ── share + info buttons ─────────────────────────────────────────
    Two extra .ctrl.skip buttons. They are positioned WITHOUT transform
    (only left/right/bottom) so the shared .ctrl:active scale never
    fights their placement. Default (mobile) layout flanks the play
@@ -469,7 +462,7 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
 /* mobile: sit left & right of the play button (replacing prev/next).
    play centre is the viewport centre; centre-to-centre spacing is
    48 (play half) + 24 (gap) + 32 (skip half) = 104px. */
-.theme-toggle { left: calc(50% - 136px); }   /* left edge = centre − 104 − 32 */
+.share-btn    { left: calc(50% - 136px); }   /* left edge = centre − 104 − 32 */
 .info-btn     { left: calc(50% + 72px);  }    /* left edge = centre + 104 − 32 */
 
 /* mobile: swipe replaces prev/next, so hide them */
@@ -483,7 +476,7 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   .corner-ctrl {
     bottom: max(var(--corner-pad), env(safe-area-inset-bottom, 0px) + 12px);
   }
-  .theme-toggle {
+  .share-btn {
     left: max(var(--corner-pad), env(safe-area-inset-left, 0px) + 12px);
   }
   .info-btn {
@@ -522,6 +515,49 @@ body.booting .corner-ctrl {
               filter 0.2s var(--ease),
               background-color var(--theme-dur, 0.45s) var(--ease) !important;
 }
+
+/* ── share fallback popover ────────────────────────────────────────
+   Shown only when the Web Share API is unavailable (desktop Firefox,
+   older browsers). JS positions it (position: fixed) anchored above the
+   share button, so only the surface styling lives here — matched to the
+   modal's grouped-card look (--panel / --panel-edge). */
+.share-pop {
+  position: fixed;
+  z-index: 20;
+  min-width: 196px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.share-pop.open { opacity: 1; transform: translateY(0); }
+.share-pop__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease);
+}
+.share-pop__item:hover { background: var(--m-row-hover); }
+.share-pop__item > svg { color: var(--green); flex-shrink: 0; }
 
 /* ── info modal ───────────────────────────────────────────────────
    A grouped, scrolling sheet: fixed header + scrollable body of labelled

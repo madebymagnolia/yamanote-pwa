@@ -408,6 +408,7 @@
   function step(delta) {
     if (delta === 0) return;
     currentIndex = ((currentIndex + delta) % N + N) % N;
+    syncUrl();   // keep the address bar on the current station for sharing
     layout(true);
     // Build the new station's scrub bar (chip + segments) right now, in the
     // same tick as the .active class flip — not inside the deferred
@@ -745,6 +746,7 @@
     direction = isInner ? -1 : +1;
     innerBtn.classList.toggle("on", isInner);
     outerBtn.classList.toggle("on", !isInner);
+    syncUrl();   // direction is part of the shareable URL (…-inner / …-outer)
     // Switching loops swaps to the other playlist's (preloaded) recording for
     // this station and starts it from the top. syncAudio only calls play()
     // when `playing` is set, so a playing deck autostarts the new track while a
@@ -775,9 +777,12 @@
 
   /* ── colour theme toggle ────────────────────────────────────────────────
      The theme attribute is set on <html> by the inline boot script before
-     paint; here we just flip it, persist the choice, and keep the iOS status
-     bar (theme-color meta) and the button's label in sync. */
-  const themeBtn = document.getElementById("theme");
+     paint. The UI entry point lives in the info modal as a Dark/Light
+     segmented control (#theme-seg); here we flip it, persist the choice, and
+     keep the iOS status bar (theme-color meta) and the control in sync. The
+     boot-time pre-paint stamping in index.html is unchanged — only the toggle
+     moved. */
+  const themeSeg = document.getElementById("theme-seg");
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   function currentTheme() {
     return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
@@ -786,9 +791,9 @@
     const changing = currentTheme() !== theme;
     document.documentElement.setAttribute("data-theme", theme);
     if (themeMeta) themeMeta.setAttribute("content", theme === "light" ? "#f2f1ed" : "#191917");
-    if (themeBtn) {
-      themeBtn.setAttribute("aria-label",
-        theme === "light" ? "Switch to dark mode" : "Switch to light mode");
+    if (themeSeg) {
+      themeSeg.querySelectorAll("[data-theme]").forEach((b) =>
+        b.classList.toggle("on", b.getAttribute("data-theme") === theme));
     }
     // The dotted spine is painted with a CSS gradient, whose colour can't be
     // transitioned — so on a theme flip it would SNAP to the new colour while
@@ -806,12 +811,117 @@
     }
     try { localStorage.setItem("yamanote-theme", theme); } catch (e) {}
   }
-  applyTheme(currentTheme());   // sync label/meta with the booted attribute
-  if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
-      applyTheme(currentTheme() === "light" ? "dark" : "light");
+  applyTheme(currentTheme());   // sync control/meta with the booted attribute
+  if (themeSeg) {
+    themeSeg.querySelectorAll("[data-theme]").forEach((b) =>
+      b.addEventListener("click", () => applyTheme(b.getAttribute("data-theme"))));
+  }
+
+  /* ── shareable station URL ───────────────────────────────────────────────
+     Every station/direction maps to a stable path: /jy13-inner. We mirror the
+     current station into the address bar as the user navigates (replaceState,
+     no history spam) so a mid-session share always reflects what they're on,
+     not wherever they landed. URL sync stays off until boot finishes so a
+     plain visit to "/" isn't rewritten until the user actually moves. */
+  const SHARE_ORIGIN = "https://yamanote.fun";
+  let urlSyncEnabled = false;
+  function stationCode(i) { return "JY" + S[normIdx(i)].jy; }   // e.g. "JY13"
+  function shareInfo() {
+    const st = S[normIdx(currentIndex)];
+    const path = "/" + stationCode(currentIndex).toLowerCase() + "-" + loopKey();
+    return {
+      name: st.name,
+      url: SHARE_ORIGIN + path,
+      path: path,
+      title: st.name + " — Yamanote.fun",
+      text: "Listening to " + st.name + " on the Yamanote Line loop",
+    };
+  }
+  function syncUrl() {
+    if (!urlSyncEnabled) return;
+    try { history.replaceState(null, "", shareInfo().path); } catch (e) {}
+  }
+
+  /* ── share button ────────────────────────────────────────────────────────
+     Native Web Share where available (mobile + most desktops); otherwise a
+     small custom popover with Copy Link + X / WhatsApp intent links. */
+  const shareBtn  = document.getElementById("share");
+  const sharePop  = document.getElementById("share-pop");
+  const shareX    = document.getElementById("share-x");
+  const shareWa   = document.getElementById("share-wa");
+  const shareCopy = document.getElementById("share-copy");
+  const shareCopyTxt = document.getElementById("share-copy-txt");
+  let sharePopOpen = false;
+
+  function positionSharePop() {
+    if (!shareBtn || !sharePop) return;
+    const r = shareBtn.getBoundingClientRect();
+    // Anchor the popover's left edge to the button, bottom just above it.
+    sharePop.style.left = Math.round(r.left) + "px";
+    sharePop.style.bottom = Math.round(window.innerHeight - r.top + 10) + "px";
+  }
+  function closeSharePop() {
+    if (!sharePopOpen) return;
+    sharePopOpen = false;
+    sharePop.classList.remove("open");
+    window.setTimeout(() => { if (!sharePopOpen) sharePop.hidden = true; }, 200);
+    document.removeEventListener("click", onDocClickForPop, true);
+  }
+  function onDocClickForPop(e) {
+    if (sharePop.contains(e.target) || (shareBtn && shareBtn.contains(e.target))) return;
+    closeSharePop();
+  }
+  function openSharePop(info) {
+    if (!sharePop) return;
+    if (shareX)  shareX.href  = "https://twitter.com/intent/tweet?text=" +
+      encodeURIComponent(info.text) + "&url=" + encodeURIComponent(info.url);
+    if (shareWa) shareWa.href = "https://wa.me/?text=" +
+      encodeURIComponent(info.text + " " + info.url);
+    sharePop.dataset.url = info.url;
+    sharePop.hidden = false;
+    positionSharePop();
+    sharePopOpen = true;
+    requestAnimationFrame(() => sharePop.classList.add("open"));
+    // capture-phase so the same tap that may have opened it doesn't close it
+    document.addEventListener("click", onDocClickForPop, true);
+  }
+  async function doShare() {
+    const info = shareInfo();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: info.title, text: info.text, url: info.url });
+      } catch (e) {
+        // User dismissed the native sheet — not an error, stay silent.
+        if (e && e.name === "AbortError") return;
+        // Anything else (NotAllowedError, unsupported payload, …): fall back.
+        openSharePop(info);
+      }
+    } else {
+      openSharePop(info);
+    }
+  }
+  if (shareBtn) {
+    shareBtn.addEventListener("click", () => {
+      if (sharePopOpen) { closeSharePop(); return; }
+      doShare();
     });
   }
+  if (shareCopy) {
+    shareCopy.addEventListener("click", async () => {
+      const url = sharePop.dataset.url || shareInfo().url;
+      try {
+        await navigator.clipboard.writeText(url);
+        if (shareCopyTxt) {
+          shareCopyTxt.textContent = "Copied!";
+          window.setTimeout(() => { shareCopyTxt.textContent = "Copy link"; }, 1500);
+        }
+      } catch (e) {}
+    });
+  }
+  // Selecting an intent link dismisses the popover; reposition on resize.
+  if (shareX)  shareX.addEventListener("click", closeSharePop);
+  if (shareWa) shareWa.addEventListener("click", closeSharePop);
+  window.addEventListener("resize", () => { if (sharePopOpen) positionSharePop(); });
 
   /* ── station-name language (EN romaji ⇄ JP kanji) ───────────────────────
      Toggled from the info modal; persisted like the theme. Swaps each ribbon
@@ -1049,6 +1159,7 @@
   }
 
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sharePopOpen) { e.preventDefault(); closeSharePop(); return; }
     if (e.key === "Escape" && modalOpen) { e.preventDefault(); closeModal(); return; }
     if (modalOpen) return;   // don't drive the transport while the dialog is up
     if (e.key === "ArrowRight") { e.preventDefault(); transportNext(); }
@@ -1149,6 +1260,7 @@
   // together. We wait for the final (post-font) layout to be painted hidden,
   // then flip on the next frame so the entrance transition actually fires.
   let revealed = false;
+  let deepLinked = false;
   function reveal() {
     if (revealed) return;
     revealed = true;
@@ -1169,18 +1281,48 @@
     });
   }
 
+  // Deep-link landing: snap the chrome into place with no intro slide. The
+  // visitor came for a specific station and shouldn't sit through an unrelated
+  // entrance, so we kill transitions for one paint, drop .booting, then re-arm.
+  function revealInstant() {
+    if (revealed) return;
+    revealed = true;
+    document.body.classList.add("no-anim");
+    document.body.classList.remove("booting");
+    void document.body.offsetHeight;          // commit the transition-free paint
+    document.body.classList.remove("no-anim");
+  }
+  function doReveal() { deepLinked ? revealInstant() : reveal(); }
+
+  // Resolve the deep link parsed before paint (window.__deepLink) to a real
+  // station. Match the JY code against the station list; an unknown code falls
+  // through to the normal first-station + intro boot rather than erroring.
+  (function applyDeepLink() {
+    const dl = window.__deepLink;
+    if (!dl) return;
+    let idx = -1;
+    for (let i = 0; i < N; i++) {
+      if (("JY" + S[i].jy) === dl.code) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    deepLinked = true;
+    currentIndex = idx;
+    direction = dl.direction === "inner" ? -1 : +1;
+  })();
+
   build();
   applyLang(currentLang());   // restore saved EN/JP station-name choice
   buildMelodyTable();         // populate the info modal's melodies table
   measure();
   layout(false);
-  setLoop(false);
+  setLoop(direction === -1);  // reflect the (possibly deep-linked) loop direction
   setupMediaSession();
   syncAudio(false);   // arm the opening track + preload neighbours (no autoplay)
+  urlSyncEnabled = true;   // from here on, navigation mirrors into the address bar
 
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => { measure(); layout(false); reveal(); });
+    document.fonts.ready.then(() => { measure(); layout(false); doReveal(); });
   }
   // Fallback: never leave the UI parked off-screen if fonts stall.
-  window.setTimeout(reveal, 1500);
+  window.setTimeout(doReveal, 1500);
 })();

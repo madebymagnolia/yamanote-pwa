@@ -1,0 +1,9 @@
+{
+  "name": "yamanote-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Yamanote.fun — the sound of riding the Yamanote Line, station by station.",
+  "scripts": {
+    "build": "node build.js"
+  }
+}

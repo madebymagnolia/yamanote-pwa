@@ -1,2 +1,6 @@
 # macOS
 .DS_Store
+
+# build output / deps
+dist/
+node_modules/

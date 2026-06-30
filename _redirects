@@ -1,0 +1,14 @@
+# Netlify redirects — station deep links (e.g. /jy13-inner).
+#
+# This catch-all lets the client-side router (see the boot script in
+# index.html + js/app.js) handle any /{code}-{direction} path: every unknown
+# path is served the SPA shell with a 200 (rewrite, not a 30x), so direct
+# loads of a shared station URL don't 404 and the app boots straight onto it.
+#
+# NOTE: when the per-station OG build (build.js → dist/) is adopted, that build
+# emits its own dist/_redirects with 60 explicit pre-rendered shell rules
+# ABOVE this catch-all. This root file covers the no-build deploy that ships
+# Parts 1–3 on their own, where shared links simply unfurl with the generic
+# site-wide preview until the OG shells land.
+
+/*    /index.html    200

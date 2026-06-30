@@ -55,13 +55,26 @@ export function init() {
   onClick("outer", () => track("loop_toggle", { loop: "outer" }));
 
   // ── appearance / language ───────────────────────────────────────
-  onClick("theme", () => track("theme_toggle", { theme: currentTheme() }));
+  // The theme toggle now lives in the info modal as a Dark/Light segmented
+  // control; app.js flips data-theme synchronously before this runs.
+  const themeSeg = document.getElementById("theme-seg");
+  if (themeSeg) {
+    themeSeg.querySelectorAll("[data-theme]").forEach((b) =>
+      b.addEventListener("click", () =>
+        track("theme_toggle", { theme: currentTheme() })));
+  }
   const langSeg = document.getElementById("lang-seg");
   if (langSeg) {
     langSeg.querySelectorAll("[data-lang]").forEach((b) =>
       b.addEventListener("click", () =>
         track("lang_toggle", { lang: currentNameLang() })));
   }
+
+  // ── share ───────────────────────────────────────────────────────
+  onClick("share", () => track("share_open"));
+  onClick("share-copy", () => track("share", { method: "copy" }));
+  onClick("share-x", () => track("share", { method: "x" }));
+  onClick("share-wa", () => track("share", { method: "whatsapp" }));
 
   // ── info modal + downloads ──────────────────────────────────────
   onClick("info", () => track("info_open"));

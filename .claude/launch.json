@@ -4,7 +4,7 @@
     {
       "name": "yamanote",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "8788", "."],
+      "runtimeArgs": ["serve", "-s", "-l", "8788", "."],
       "port": 8788
     }
   ]

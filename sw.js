@@ -4,14 +4,14 @@
 // cache name changes — leave it stale and returning visitors keep loading an
 // old app shell that points at outdated JS. Keep the ?v= versions below in
 // sync with index.html so the precache stores the assets that shell requests.
-const CACHE = "yamanote-v61";
+const CACHE = "yamanote-v62";
 const ASSETS = [
   "index.html",
-  "css/styles.css?v=47",
+  "css/styles.css?v=48",
   "js/stations.js?v=33",
-  "js/app.js?v=62",
+  "js/app.js?v=63",
   "js/pwa-install.js?v=2",
-  "js/analytics.js?v=1",
+  "js/analytics.js?v=2",
   "manifest.webmanifest",
   "icons/icon-192-0.3.png",
   "icons/icon-512-0.3.png",
@@ -56,16 +56,24 @@ self.addEventListener("fetch", (e) => {
   // API matches by URL and ignores Range, so it would hand back the wrong bytes.
   if (req.headers.has("range")) return;
 
-  // cache-first for the app shell, network fallback (and cache new GETs)
+  // cache-first for the app shell, network fallback (and cache new GETs).
+  // Navigations to station deep links (e.g. /jy13-inner) aren't cached under
+  // their own URL — online they're rewritten to the shell by Netlify, and
+  // offline they fall back to the cached index.html so the client-side router
+  // can still position onto the shared station. We don't cache navigation
+  // responses (they're all the shell) to avoid 60 duplicate copies piling up.
+  const isNav = req.mode === "navigate";
   e.respondWith(
-    caches.match(req).then((hit) =>
-      hit ||
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+    caches.match(req).then((hit) => {
+      if (hit) return hit;
+      return fetch(req).then((res) => {
+        if (!isNav) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
         return res;
-      }).catch(() => hit)
-    )
+      }).catch(() => hit || (isNav ? caches.match("index.html") : undefined));
+    })
   );
 });
 

@@ -295,6 +295,13 @@ html[data-theme="light"] .station.active .badge .num {
   cursor: default;
 }
 
+/* Hover feedback on the tappable prev/next names. Scoped to (hover: hover) so
+   it only affects mouse users and never leaves a sticky highlight on touch;
+   the active name is excluded since it isn't a jump target. */
+@media (hover: hover) {
+  .station:not(.active) .name:hover { color: var(--scrub-hover); }
+}
+
 /* Kanji station names (JP mode) use Zen Maru Gothic. data-namelang is set on
    <html> by applyLang; the weight follows the theme — medium in dark, bold in
    light — to keep the heavier strokes legible on the near-white surface. */

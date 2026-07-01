@@ -541,6 +541,11 @@ body.booting .corner-ctrl {
   transform: translateY(6px);
   transition: opacity 0.16s var(--ease), transform 0.16s var(--ease);
 }
+/* The `display: flex` above would otherwise override the UA `[hidden]`
+   rule, leaving the (transparent) popover rendered at its default fixed
+   position — where it silently covers the left of the loop toggle on narrow
+   viewports and swallows those taps. This keeps `hidden` authoritative. */
+.share-pop[hidden] { display: none; }
 .share-pop.open { opacity: 1; transform: translateY(0); }
 .share-pop__item {
   display: flex;

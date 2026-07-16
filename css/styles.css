@@ -1058,10 +1058,10 @@ a.m-row:hover { background: var(--m-row-hover); }
 @media (orientation: landscape) and (hover: none) and (pointer: coarse) {
   .rotate-lock { display: flex; }
 }
-@media (orientation: landscape) {
+@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
   html.standalone .rotate-lock { display: flex; }
 }
-@media (display-mode: standalone) and (orientation: landscape) {
+@media (display-mode: standalone) and (orientation: landscape) and (hover: none) and (pointer: coarse) {
   .rotate-lock { display: flex; }
 }
 
